@@ -30,12 +30,13 @@ def lambda_handler(event, context):
         
         # Create a unique ID for the retailer (based on the store name)
         retailer_id = hashlib.md5(store_name.encode()).hexdigest()
-        
+        retailer_website_name = f"{retailer_id}_{store_url}"
+
         # Add retailer to the Retailers table if not exists
         add_retailer_if_not_exists(retailer_id, store_name, store_url)
         
         # Insert the cashback rate into the CashbackRates table
-        insert_cashback_rate(retailer_id, 'rakuten.ca', cashback_rate, is_up_to)
+        insert_cashback_rate(retailer_website_name, retailer_id, 'rakuten.ca', cashback_rate, is_up_to)
 
 def parse_cashback(cashback_text):
     cashback_text = cashback_text.lower().replace("cash back", "").strip()
@@ -65,11 +66,12 @@ def add_retailer_if_not_exists(retailer_id, retailer_name, store_url):
     except Exception as e:
         print(f"Error adding retailer {retailer_name}: {e}")
 
-def insert_cashback_rate(retailer_id, website_name, cashback_rate, is_up_to):
+def insert_cashback_rate(retailer_website_name, retailer_id, website_name, cashback_rate, is_up_to):
     try:
         # Insert cashback rate with the "up to" flag and timestamp
         cashback_table.put_item(
             Item={
+                'RetailerIDWebsiteName': retailer_website_name,
                 'RetailerID': retailer_id,
                 'WebsiteName': website_name,
                 'CashbackRate': cashback_rate,
@@ -81,4 +83,3 @@ def insert_cashback_rate(retailer_id, website_name, cashback_rate, is_up_to):
         )
     except Exception as e:
         print(f"Error inserting cashback rate for {retailer_id}: {e}")
-
