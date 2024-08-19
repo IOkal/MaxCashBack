@@ -1,64 +1,78 @@
+import json
+import boto3
 import requests
 from bs4 import BeautifulSoup
-import boto3
-import hashlib
-import logging
-
-# Initialize logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger()
+import datetime
 
 # Initialize DynamoDB resource
-dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('YourDynamoDBTableName')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-2')
 
-def scrape_section(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise an HTTPError if the HTTP request returned an unsuccessful status code
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request failed for URL {url}: {str(e)}")
-        return []  # Return an empty list if the request fails
-
-    soup = BeautifulSoup(response.content, 'html.parser')
-    cashback_items = []
+# Function to update Retailers table with new website aliases
+def update_retailer_website_aliases(retailer_id, new_alias, retailer_name):
+    table = dynamodb.Table('Retailers')
     
-    for item in soup.find_all('tr'):
+    try:
+        response = table.update_item(
+            Key={
+                'RetailerID': retailer_id
+            },
+            UpdateExpression="SET WebsiteAliases = :wa, UpdatedAt = :ua",
+            ExpressionAttributeValues={
+                ':wa': new_alias,
+                ':ua': datetime.datetime.now().isoformat()
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+        print(f"Updated RetailerID {retailer_id} with new alias {new_alias} for {retailer_name}")
+    except Exception as e:
+        print(f"Error updating RetailerID {retailer_id} for {retailer_name}: {str(e)}")
+
+# Function to insert cashback rate data into CashbackRates-GCR table
+def insert_cashback_rate_gcr(data):
+    table = dynamodb.Table('CashbackRates-GCR')
+    try:
+        table.put_item(Item=data)
+        print(f"Inserted cashback rate for {data['RetailerIDWebsiteName']}")
+    except Exception as e:
+        print(f"Error inserting cashback rate for {data['RetailerIDWebsiteName']}: {str(e)}")
+
+# Function to scrape cashback data from a given section URL
+def scrape_section(section_url):
+    response = requests.get(section_url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    for item in soup.find_all('fieldset', class_='smallbox nolegend'):
         try:
-            retailer_name_element = item.find('a', class_='listshopname')
-            cashback_span = item.find_next('span', class_='listrebate')
-            
-            if retailer_name_element and cashback_span:
-                retailer_name = retailer_name_element.get_text(strip=True)
-                cashback = cashback_span.get_text(strip=True)
-                
-                # Handle 'Up to' case
-                if 'Up to' in cashback:
-                    cashback = cashback.replace('Up to', '').strip()
-                    cashback = f"UP TO {cashback}"
-                
-                retailer_id = hashlib.md5((retailer_name + url).encode('utf-8')).hexdigest()
-                
-                cashback_items.append({
-                    'RetailerIDWebsiteName': retailer_id,
-                    'RetailerName': retailer_name,
-                    'Cashback': cashback,
-                    'WebsiteName': url
-                })
-            else:
-                logger.warning(f"Missing retailer name or cashback information for item in URL {url}")
+            retailer_name = item.find('a', class_='listshopname').get_text(strip=True)
+            cashback = item.find_next('span', class_='listrebate').get_text(strip=True)
+            is_up_to = 'Up to' in item.find_next('span', class_='listrebate').parent.get_text(strip=True)
+
+            retailer_id = "generate_or_lookup_id_based_on_logic"  # Replace with actual logic to determine RetailerID
+            retailer_id_website_name = f"{retailer_id}_{item.find('a', class_='listshopname')['href']}"
+
+            cashback_data = {
+                'RetailerIDWebsiteName': retailer_id_website_name,
+                'Timestamp': datetime.datetime.now().isoformat(),
+                'CashbackRate': cashback,
+                'CreatedAt': datetime.datetime.now().isoformat(),
+                'IsUpTo': is_up_to,
+                'RetailerID': retailer_id,
+                'UpdatedAt': datetime.datetime.now().isoformat(),
+                'WebsiteName': 'greatcanadianrebates.ca'
+            }
+
+            insert_cashback_rate_gcr(cashback_data)
+
+            # Update Retailers table with the new alias if needed
+            new_alias = json.dumps({ "greatcanadianrebates.ca": { "S": item.find('a', class_='listshopname')['href'] } })
+            update_retailer_website_aliases(retailer_id, new_alias, retailer_name)
         
-        except Exception as e:
-            logger.error(f"Error processing item in URL {url}: {str(e)}")
-            continue  # Skip to the next item if an error occurs
+        except AttributeError as e:
+            print(f"Error processing an item: {str(e)}")
 
-    return cashback_items
-
+# Main Lambda handler function
 def lambda_handler(event, context):
-    section_urls = [
+    sections = [
         "https://www.greatcanadianrebates.ca/display/Apparel/",
         "https://www.greatcanadianrebates.ca/display/Flowers/",
         "https://www.greatcanadianrebates.ca/display/Automotive/",
@@ -80,20 +94,11 @@ def lambda_handler(event, context):
         "https://www.greatcanadianrebates.ca/display/Gift-Cards/",
         "https://www.greatcanadianrebates.ca/display/Travel/"
     ]
-    
-    for section_url in section_urls:
-        logger.info(f"Scraping section URL: {section_url}")
-        cashback_data = scrape_section(section_url)
-        
-        for item in cashback_data:
-            try:
-                table.put_item(Item=item)
-                logger.info(f"Successfully inserted cashback rate for {item['RetailerName']}")
-            except Exception as e:
-                logger.error(f"Error inserting cashback rate for {item['RetailerName']}: {str(e)}")
+
+    for section_url in sections:
+        scrape_section(section_url)
     
     return {
         'statusCode': 200,
-        'body': 'Scraping and insertion complete'
+        'body': json.dumps('Scraping and data insertion completed successfully.')
     }
-
