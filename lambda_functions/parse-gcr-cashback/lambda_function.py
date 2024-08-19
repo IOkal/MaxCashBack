@@ -10,7 +10,26 @@ table = dynamodb.Table('YourDynamoDBTableName')  # Replace with your DynamoDB ta
 sections = [
     "https://www.greatcanadianrebates.ca/display/Apparel/",
     "https://www.greatcanadianrebates.ca/display/Flowers/",
-    # Add the remaining URLs here...
+    "https://www.greatcanadianrebates.ca/display/Automotive/",
+    "https://www.greatcanadianrebates.ca/display/Groceries/",
+    "https://www.greatcanadianrebates.ca/display/Baby/",
+    "https://www.greatcanadianrebates.ca/display/Health/",
+    "https://www.greatcanadianrebates.ca/display/BMM/",
+    "https://www.greatcanadianrebates.ca/display/Home/",
+    "https://www.greatcanadianrebates.ca/display/Business/",
+    "https://www.greatcanadianrebates.ca/display/Jewelry/",
+    "https://www.greatcanadianrebates.ca/display/Hobbies/",
+    "https://www.greatcanadianrebates.ca/display/Jewelry/",
+    "https://www.greatcanadianrebates.ca/display/Hobbies/",
+    "https://www.greatcanadianrebates.ca/display/Pets/",
+    "https://www.greatcanadianrebates.ca/display/Computers/",
+    "https://www.greatcanadianrebates.ca/display/Services/",
+    "https://www.greatcanadianrebates.ca/display/Electronics/",
+    "https://www.greatcanadianrebates.ca/display/Sporting/",
+    "https://www.greatcanadianrebates.ca/display/Finance/",
+    "https://www.greatcanadianrebates.ca/display/Toys/",
+    "https://www.greatcanadianrebates.ca/display/Gift-Cards/",
+    "https://www.greatcanadianrebates.ca/display/Travel/"
 ]
 
 def scrape_section(url):
