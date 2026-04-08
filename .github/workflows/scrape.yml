@@ -1,0 +1,47 @@
+name: Daily Cashback Scrape
+
+on:
+  schedule:
+    # Run daily at 8am UTC (3am EST)
+    - cron: '0 8 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          cd scrapers
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps
+
+      - name: Run GCR scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd scrapers
+          python gcr_scraper.py
+
+      - name: Run Rakuten scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd scrapers
+          python rakuten_scraper.py
+
+      - name: Run Aeroplan scraper
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd scrapers
+          python aeroplan_scraper.py
