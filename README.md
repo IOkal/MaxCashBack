@@ -1,6 +1,6 @@
 # MaxCashBack
 
-Canadian cashback and rewards comparison tool. Search for any retailer and instantly see which cashback portal offers the best rate — across Rakuten.ca, Great Canadian Rebates, Aeroplan eStore, and more.
+Canadian cashback and rewards comparison tool. Search for any retailer and instantly see which cashback portal offers the best rate — across Rakuten.ca, Great Canadian Rebates, Aeroplan eStore, TopCashback Canada, and more.
 
 ## Stack
 
@@ -18,6 +18,7 @@ See [CLAUDE.md](CLAUDE.md) for full architecture docs, scraping notes, and setup
 cd scrapers
 pip install -r requirements.txt
 python gcr_scraper.py --dry-run
+python tcb_scraper.py --dry-run
 
 # Run the frontend
 cd web

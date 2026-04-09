@@ -16,12 +16,12 @@ export const metadata: Metadata = {
     template: '%s | MaxCashBack',
   },
   description:
-    'Compare cashback rates across Rakuten, Great Canadian Rebates, Aeroplan eStore and more. Find the best Canadian cashback portal for every store.',
+    'Compare cashback rates across Rakuten, Great Canadian Rebates, Aeroplan eStore, TopCashback Canada and more. Find the best Canadian cashback portal for every store.',
   metadataBase: new URL('https://maxcashback.ca'),
   openGraph: {
     title: 'MaxCashBack — Canadian Cashback Comparison',
     description:
-      'Compare cashback rates across Rakuten, Great Canadian Rebates, Aeroplan eStore and more. Find the best Canadian cashback portal for every store.',
+      'Compare cashback rates across Rakuten, Great Canadian Rebates, Aeroplan eStore, TopCashback Canada and more. Find the best Canadian cashback portal for every store.',
     url: 'https://maxcashback.ca',
     siteName: 'MaxCashBack',
     type: 'website',
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     card: 'summary',
     title: 'MaxCashBack — Canadian Cashback Comparison',
     description:
-      'Compare cashback rates across Rakuten, GCR, Aeroplan eStore and more.',
+      'Compare cashback rates across Rakuten, GCR, Aeroplan eStore, TopCashback Canada and more.',
   },
   alternates: {
     canonical: 'https://maxcashback.ca',

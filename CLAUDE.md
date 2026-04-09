@@ -11,8 +11,9 @@ Users search for a retailer (e.g. "Amazon") and see a comparison table of cashba
 1. **Rakuten.ca** — Cash back (percentage). ~750 stores. JS-rendered site.
 2. **Great Canadian Rebates (GCR)** — Cash back (percentage). ~900 stores. Traditional HTML, category-based pages.
 3. **Aeroplan eStore** — Points per dollar (Aeroplan points). ~200 stores. JS-rendered.
+4. **TopCashback Canada** — Cash back (percentage or fixed amount). ~220 stores in the Canada category. Traditional HTML, paginated category pages.
 
-Future additions: TopCashback Canada, Swagbucks Canada, credit card shopping portals (RBC, TD, etc.)
+Future additions: Swagbucks Canada, credit card shopping portals (RBC, TD, etc.)
 
 ## Architecture
 
@@ -48,7 +49,8 @@ MaxCashBack/
 │   ├── rakuten_scraper.py     # Rakuten.ca scraper
 │   ├── gcr_scraper.py         # Great Canadian Rebates scraper
 │   ├── aeroplan_scraper.py    # Aeroplan eStore scraper
-│   ├── retailer_matcher.py    # Fuzzy matching + alias resolution
+│   ├── tcb_scraper.py         # TopCashback Canada scraper
+│   ├── retailer_identity.py   # Shared alias resolution + normalization helpers
 │   └── db.py                  # Database connection & upsert helpers
 ├── web/                       # Next.js frontend
 │   ├── package.json
@@ -72,14 +74,14 @@ MaxCashBack/
 ### Database Schema (PostgreSQL)
 
 Four main tables:
-- **sources** — Cashback portals (Rakuten, GCR, Aeroplan, etc.)
+- **sources** — Cashback portals (Rakuten, GCR, Aeroplan, TopCashback, etc.)
 - **retailers** — Canonical retailer records (one per real store)
 - **retailer_aliases** — Maps variant names ("The Bay", "Hudson's Bay") to a single retailer
 - **cashback_rates** — Current and historical rates per retailer × source
 
 ### Key Design Decisions
 
-1. **Playwright over BeautifulSoup**: Rakuten and Aeroplan eStore are JS-rendered. The legacy Lambda functions used BeautifulSoup which couldn't capture the data. Playwright handles all sites consistently.
+1. **Use the lightest scraper that fits the site**: Rakuten, GCR, and TopCashback category pages are available in server-rendered HTML, so `requests` plus HTML parsing is enough. Aeroplan still requires Playwright because its retailer list is client-rendered.
 
 2. **PostgreSQL over DynamoDB**: The core query is relational — "give me all rates for retailer X across all sources." JOINs make this natural. Supabase gives us a free hosted Postgres with a REST API.
 
@@ -107,6 +109,12 @@ Four main tables:
 - Shows points per dollar (1-10+ pts/$)
 - Must be logged out to see base rates (logged-in shows elite bonus rates)
 
+### TopCashback Canada
+- URL: https://www.topcashback.com/category/canada-retailers/
+- Server-rendered HTML with `?page=N` pagination
+- Category cards contain store name, listing cashback rate, and merchant detail URL
+- Use the category listing rate for now because the detail page can expose multiple sub-rates
+
 ## Legacy Code
 
 The `lambda_functions/` directory contains the original Lambda+DynamoDB approach. It's kept for reference but is NOT part of the new architecture. Key issues with the old approach:
@@ -124,6 +132,7 @@ pip install -r requirements.txt
 python gcr_scraper.py          # Run GCR scraper
 python rakuten_scraper.py      # Run Rakuten scraper
 python aeroplan_scraper.py     # Run Aeroplan scraper
+python tcb_scraper.py          # Run TopCashback scraper
 
 # Frontend
 cd web
