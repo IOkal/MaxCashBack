@@ -264,7 +264,7 @@ export async function getStoreRateHistory(
   return buildStoreRateHistory(((data ?? []) as unknown) as HistoricalRate[], days)
 }
 
-export async function getHighestEarnRates(limit = 50): Promise<CashbackRate[]> {
+export async function getHighestEarnRates(limit = 30): Promise<CashbackRate[]> {
   const { data, error } = await supabase
     .from('current_rates')
     .select('*')

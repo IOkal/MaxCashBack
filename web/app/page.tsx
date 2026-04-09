@@ -89,7 +89,7 @@ async function HighestEarnRatesSection() {
             Highest earn rates
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Top 50 current offers sorted by effective cash rate.
+            Top 30 current offers sorted by effective cash rate.
           </p>
         </div>
         <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
