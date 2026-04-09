@@ -228,8 +228,6 @@ async function StoreContent({ params }: { params: Promise<{ slug: string }> }) {
 
           <AdSlot placement="store_inline" />
 
-          <HistoryCard history={history} />
-
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
@@ -282,6 +280,8 @@ async function StoreContent({ params }: { params: Promise<{ slug: string }> }) {
               </tbody>
             </table>
           </div>
+
+          <HistoryCard history={history} />
         </>
       )}
     </div>
