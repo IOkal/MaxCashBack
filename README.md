@@ -66,11 +66,12 @@ What we learned:
 - we should use manual display ad units, not Auto ads, because the app already has explicit placements
 - real setup depends on a deployed production domain, site verification, and AdSense review
 - localhost is only useful for validating the integration path, not for true monetization testing
+- the app now supports env-driven Google verification metadata and a generated `/ads.txt` endpoint
 
 Future task when deployment is ready:
 
 1. Add the production site in AdSense and complete site verification
 2. Create 3 responsive display ad units: homepage top, homepage inline, store inline
 3. Set the production env vars in the hosting platform
-4. Turn on `NEXT_PUBLIC_ENABLE_ADS`
-5. Optionally add `ads.txt` after the site is approved
+4. Verify `/ads.txt` on the live domain
+5. Turn on `NEXT_PUBLIC_ENABLE_ADS`

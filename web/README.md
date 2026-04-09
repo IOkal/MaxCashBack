@@ -38,6 +38,14 @@ Current placements:
 
 The app loads the AdSense script once from the root layout and each placement is env-gated, so local development still works with ads turned off.
 
+Optional related env:
+
+- `GOOGLE_SITE_VERIFICATION`
+
+If set, the app emits Google verification metadata in the document head.
+
+The app also serves `/ads.txt` automatically when `NEXT_PUBLIC_ADSENSE_CLIENT` is configured.
+
 ## AdSense Rollout Notes
 
 This integration is implemented but intentionally not live until the production domain is ready.
@@ -57,7 +65,8 @@ When ready to launch ads:
    - homepage inline
    - store inline
 4. Set the matching env vars in production
-5. Enable `NEXT_PUBLIC_ENABLE_ADS=true`
+5. Confirm `/ads.txt` resolves on the production domain
+6. Enable `NEXT_PUBLIC_ENABLE_ADS=true`
 
 Recommended production follow-up:
 
