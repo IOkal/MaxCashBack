@@ -3,15 +3,13 @@ import { Suspense } from 'react'
 import AdSlot from '@/components/AdSlot'
 import SearchBox from '@/components/SearchBox'
 import {
-  getAllRetailers,
   getFeaturedRetailers,
   getHighestEarnRates,
   type CashbackRate,
 } from '@/lib/db'
 
-async function SearchSection() {
-  const retailers = await getAllRetailers()
-  return <SearchBox retailers={retailers} />
+function SearchSection() {
+  return <SearchBox />
 }
 
 async function FeaturedRetailersSection() {

@@ -4,22 +4,19 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Retailer } from '@/lib/db'
 
-export default function SearchBox({ retailers }: { retailers: Retailer[] }) {
+export default function SearchBox() {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
+  const [matches, setMatches] = useState<Retailer[]>([])
+  const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const router = useRouter()
 
-  const matches = query.trim().length === 0
-    ? []
-    : retailers
-        .filter((r) => r.name.toLowerCase().includes(query.toLowerCase()))
-        .slice(0, 8)
-
   function handleSelect(retailer: Retailer) {
     setQuery('')
+    setMatches([])
     setOpen(false)
     router.push(`/store/${retailer.slug}`)
   }
@@ -35,11 +32,63 @@ export default function SearchBox({ retailers }: { retailers: Retailer[] }) {
       setActiveIndex((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter') {
       e.preventDefault()
-      if (activeIndex >= 0) handleSelect(matches[activeIndex])
+      if (activeIndex >= 0) {
+        handleSelect(matches[activeIndex])
+      } else if (matches.length > 0) {
+        handleSelect(matches[0])
+      }
     } else if (e.key === 'Escape') {
       setOpen(false)
     }
   }
+
+  useEffect(() => {
+    const trimmed = query.trim()
+
+    if (!trimmed) {
+      setMatches([])
+      setLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(async () => {
+      setLoading(true)
+
+      try {
+        const response = await fetch(
+          `/api/retailers/search?q=${encodeURIComponent(trimmed)}`,
+          {
+            signal: controller.signal,
+            cache: 'no-store',
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error(`Search request failed with ${response.status}`)
+        }
+
+        const payload = (await response.json()) as { retailers?: Retailer[] }
+        if (!controller.signal.aborted) {
+          setMatches(payload.retailers ?? [])
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error('[SearchBox] retailer search failed:', error)
+          setMatches([])
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      }
+    }, 150)
+
+    return () => {
+      controller.abort()
+      window.clearTimeout(timeoutId)
+    }
+  }, [query])
 
   // Scroll active item into view
   useEffect(() => {
@@ -56,9 +105,12 @@ export default function SearchBox({ retailers }: { retailers: Retailer[] }) {
         type="search"
         value={query}
         onChange={(e) => {
-          setQuery(e.target.value)
+          const nextQuery = e.target.value
+          setQuery(nextQuery)
+          setMatches([])
           setActiveIndex(-1)
           setOpen(true)
+          setLoading(nextQuery.trim().length > 0)
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -95,7 +147,13 @@ export default function SearchBox({ retailers }: { retailers: Retailer[] }) {
         </ul>
       )}
 
-      {open && query.trim().length > 0 && matches.length === 0 && (
+      {open && loading && query.trim().length > 0 && matches.length === 0 && (
+        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-lg">
+          Searching stores…
+        </div>
+      )}
+
+      {open && !loading && query.trim().length > 0 && matches.length === 0 && (
         <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-lg">
           No stores found for &ldquo;{query}&rdquo;
         </div>

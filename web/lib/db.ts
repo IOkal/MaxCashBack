@@ -154,16 +154,94 @@ function buildStoreRateHistory(rows: HistoricalRate[], days = 30): StoreRateHist
 }
 
 export async function getAllRetailers(): Promise<Retailer[]> {
-  const { data, error } = await supabase
+  const pageSize = 1000
+  const retailers: Retailer[] = []
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('retailers')
+      .select('id, name, slug, category')
+      .order('name')
+      .order('id')
+      .range(from, from + pageSize - 1)
+
+    if (error) {
+      console.error('[db] getAllRetailers failed:', error.message)
+      return []
+    }
+
+    const page = data ?? []
+    retailers.push(...page)
+
+    if (page.length < pageSize) break
+  }
+
+  return retailers
+}
+
+function normalizeRetailerSearchQuery(query: string): string {
+  return query
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export async function searchRetailers(query: string, limit = 8): Promise<Retailer[]> {
+  const trimmed = query.trim()
+  if (!trimmed) return []
+
+  const matches = new Map<number, Retailer>()
+
+  const { data: nameMatches, error: nameError } = await supabase
     .from('retailers')
     .select('id, name, slug, category')
+    .ilike('name', `%${trimmed}%`)
     .order('name')
+    .order('id')
+    .limit(limit)
 
-  if (error) {
-    console.error('[db] getAllRetailers failed:', error.message)
+  if (nameError) {
+    console.error('[db] searchRetailers name query failed:', nameError.message)
     return []
   }
-  return data ?? []
+
+  for (const retailer of nameMatches ?? []) {
+    matches.set(retailer.id, retailer)
+  }
+
+  if (matches.size >= limit) {
+    return Array.from(matches.values()).slice(0, limit)
+  }
+
+  const normalized = normalizeRetailerSearchQuery(trimmed)
+  if (!normalized) {
+    return Array.from(matches.values()).slice(0, limit)
+  }
+
+  const { data: normalizedMatches, error: normalizedError } = await supabase
+    .from('retailers')
+    .select('id, name, slug, category')
+    .ilike('normalized_name', `%${normalized}%`)
+    .order('name')
+    .order('id')
+    .limit(limit)
+
+  if (normalizedError) {
+    console.error(
+      '[db] searchRetailers normalized query failed:',
+      normalizedError.message
+    )
+    return Array.from(matches.values()).slice(0, limit)
+  }
+
+  for (const retailer of normalizedMatches ?? []) {
+    matches.set(retailer.id, retailer)
+    if (matches.size >= limit) break
+  }
+
+  return Array.from(matches.values()).slice(0, limit)
 }
 
 export type PopularRetailer = Retailer & {
