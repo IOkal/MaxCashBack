@@ -29,7 +29,10 @@ export async function getAllRetailers(): Promise<Retailer[]> {
     .select('id, name, slug, category')
     .order('name')
 
-  if (error) throw error
+  if (error) {
+    console.error('[db] getAllRetailers failed:', error.message)
+    return []
+  }
   return data ?? []
 }
 
@@ -40,7 +43,10 @@ export async function getFeaturedRetailers(limit = 24): Promise<Retailer[]> {
     .order('name')
     .limit(limit)
 
-  if (error) throw error
+  if (error) {
+    console.error('[db] getFeaturedRetailers failed:', error.message)
+    return []
+  }
   return data ?? []
 }
 
@@ -51,7 +57,10 @@ export async function getRetailerBySlug(slug: string): Promise<Retailer | null> 
     .eq('slug', slug)
     .maybeSingle()
 
-  if (error) throw error
+  if (error) {
+    console.error('[db] getRetailerBySlug failed:', error.message)
+    return null
+  }
   return data
 }
 
@@ -62,7 +71,10 @@ export async function getStoreRates(slug: string): Promise<CashbackRate[]> {
     .eq('retailer_slug', slug)
     .order('effective_cash_percentage', { ascending: false, nullsFirst: false })
 
-  if (error) throw error
+  if (error) {
+    console.error('[db] getStoreRates failed:', error.message)
+    return []
+  }
   return data ?? []
 }
 
@@ -75,6 +87,9 @@ export async function getHighestEarnRates(limit = 50): Promise<CashbackRate[]> {
     .order('retailer_name')
     .limit(limit)
 
-  if (error) throw error
+  if (error) {
+    console.error('[db] getHighestEarnRates failed:', error.message)
+    return []
+  }
   return data ?? []
 }

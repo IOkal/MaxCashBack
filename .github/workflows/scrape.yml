@@ -27,6 +27,7 @@ jobs:
           playwright install-deps
 
       - name: Run GCR scraper
+        id: gcr
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -35,6 +36,7 @@ jobs:
           python gcr_scraper.py
 
       - name: Run Rakuten scraper
+        id: rakuten
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -43,9 +45,25 @@ jobs:
           python rakuten_scraper.py
 
       - name: Run Aeroplan scraper
+        id: aeroplan
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           cd scrapers
           python aeroplan_scraper.py
+
+      - name: Alert on scraper failure
+        if: steps.gcr.outcome == 'failure' || steps.rakuten.outcome == 'failure' || steps.aeroplan.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FAILED=""
+          [ "${{ steps.gcr.outcome }}" = "failure" ] && FAILED="$FAILED- GCR\n"
+          [ "${{ steps.rakuten.outcome }}" = "failure" ] && FAILED="$FAILED- Rakuten\n"
+          [ "${{ steps.aeroplan.outcome }}" = "failure" ] && FAILED="$FAILED- Aeroplan\n"
+
+          gh issue create \
+            --title "Scraper failure on $(date -u +%Y-%m-%d %H:%M UTC)" \
+            --label "scraper-alert" \
+            --body "$(printf "The following scrapers failed during the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}):\n\n${FAILED}\nData from the last successful run is still being served (at most 12h old). Check the run logs for details.")"
