@@ -6,6 +6,7 @@ import { adsEnabled, adsenseClient } from '@/lib/ads'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
+const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION?.trim()
 
 export const metadata: Metadata = {
   title: {
@@ -14,6 +15,28 @@ export const metadata: Metadata = {
   },
   description:
     'Compare cashback rates across Rakuten, Great Canadian Rebates, Aeroplan eStore and more. Find the best Canadian cashback portal for every store.',
+  metadataBase: new URL('https://maxcashback.ca'),
+  openGraph: {
+    title: 'MaxCashBack — Canadian Cashback Comparison',
+    description:
+      'Compare cashback rates across Rakuten, Great Canadian Rebates, Aeroplan eStore and more. Find the best Canadian cashback portal for every store.',
+    url: 'https://maxcashback.ca',
+    siteName: 'MaxCashBack',
+    type: 'website',
+    locale: 'en_CA',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'MaxCashBack — Canadian Cashback Comparison',
+    description:
+      'Compare cashback rates across Rakuten, GCR, Aeroplan eStore and more.',
+  },
+  alternates: {
+    canonical: 'https://maxcashback.ca',
+  },
+  verification: googleSiteVerification
+    ? { google: googleSiteVerification }
+    : undefined,
 }
 
 export default function RootLayout({

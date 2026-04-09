@@ -10,9 +10,28 @@ type Props = { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const retailer = await getRetailerBySlug(slug)
+  const [retailer, rates] = await Promise.all([
+    getRetailerBySlug(slug),
+    getStoreRates(slug),
+  ])
   if (!retailer) return { title: 'Store not found' }
-  return { title: retailer.name }
+
+  const best = rates[0]
+  const desc = best
+    ? `Compare ${rates.length} cashback rate${rates.length > 1 ? 's' : ''} for ${retailer.name}. Best: ${best.rate_display ?? `${best.rate_value}%`} via ${best.source_name}.`
+    : `Compare cashback rates for ${retailer.name} across Canadian portals.`
+
+  return {
+    title: `${retailer.name} Cashback Rates`,
+    description: desc,
+    openGraph: {
+      title: `${retailer.name} — Best Canadian Cashback Rates`,
+      description: desc,
+      url: `https://maxcashback.ca/store/${slug}`,
+      siteName: 'MaxCashBack',
+      type: 'website',
+    },
+  }
 }
 
 function formatRate(rate: CashbackRate): string {
