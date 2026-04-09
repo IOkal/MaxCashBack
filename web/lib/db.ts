@@ -168,9 +168,8 @@ export async function getAllRetailers(): Promise<Retailer[]> {
 
 export async function getFeaturedRetailers(limit = 24): Promise<Retailer[]> {
   const { data, error } = await supabase
-    .from('retailers')
+    .from('popular_retailers')
     .select('id, name, slug, category')
-    .order('name')
     .limit(limit)
 
   if (error) {

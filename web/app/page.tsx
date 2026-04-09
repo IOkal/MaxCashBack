@@ -25,7 +25,7 @@ async function FeaturedRetailersSection() {
             Popular retailers
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Alphabetical for now. This will switch to click-based popularity once we log traffic.
+            Sorted by how often visitors look them up.
           </p>
         </div>
         <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">

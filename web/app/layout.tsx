@@ -1,8 +1,10 @@
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Script from 'next/script'
 import { Geist } from 'next/font/google'
 import { adsEnabled, adsenseClient } from '@/lib/ads'
+import GoogleAnalytics from '@/components/GoogleAnalytics'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
@@ -68,6 +70,9 @@ export default function RootLayout({
         <footer className="mt-auto border-t bg-white py-6 text-center text-xs text-gray-400">
           Rates scraped daily. Always verify before purchasing.
         </footer>
+        <Suspense fallback={null}>
+          <GoogleAnalytics />
+        </Suspense>
       </body>
     </html>
   )

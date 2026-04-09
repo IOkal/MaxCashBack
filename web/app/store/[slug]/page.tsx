@@ -1,9 +1,11 @@
 import { Suspense } from 'react'
+import { after } from 'next/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import AdSlot from '@/components/AdSlot'
 import { getRetailerBySlug, getStoreRateHistory, getStoreRates } from '@/lib/db'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import type { CashbackRate, StoreHistoryPoint, StoreRateHistory } from '@/lib/db'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -196,6 +198,18 @@ async function StoreContent({ params }: { params: Promise<{ slug: string }> }) {
   ])
 
   if (!retailer) notFound()
+
+  // Track store visit server-side after the response is sent
+  after(async () => {
+    try {
+      const supabaseAdmin = getSupabaseAdmin()
+      await supabaseAdmin.rpc('increment_store_visit', {
+        p_retailer_id: retailer.id,
+      })
+    } catch (err) {
+      console.error('[store-visit] Failed to track visit:', err)
+    }
+  })
 
   const bestRate = rates[0] ?? null
 
