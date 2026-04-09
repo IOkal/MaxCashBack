@@ -2,8 +2,9 @@ name: Daily Cashback Scrape
 
 on:
   schedule:
-    # Run daily at 8am UTC (3am EST)
+    # Run twice daily: 8am and 8pm UTC (3am and 3pm EST)
     - cron: '0 8 * * *'
+    - cron: '0 20 * * *'
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
@@ -26,6 +27,7 @@ jobs:
           playwright install-deps
 
       - name: Run GCR scraper
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
@@ -33,6 +35,7 @@ jobs:
           python gcr_scraper.py
 
       - name: Run Rakuten scraper
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
@@ -40,6 +43,7 @@ jobs:
           python rakuten_scraper.py
 
       - name: Run Aeroplan scraper
+        continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
