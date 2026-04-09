@@ -55,7 +55,7 @@ class BaseScraper(abc.ABC):
             for rate in rates:
                 try:
                     retailer_id = find_or_create_retailer(
-                        conn, rate.store_name, source_id, rate.source_url
+                        conn, rate.store_name, source_id, self.SOURCE_SLUG, rate.source_url
                     )
                     changed = upsert_cashback_rate(
                         conn,

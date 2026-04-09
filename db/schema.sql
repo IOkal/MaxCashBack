@@ -130,7 +130,8 @@ LEFT JOIN LATERAL (
     WHERE retailer_aliases.retailer_id = r.id
       AND retailer_aliases.source_id = s.id
       AND retailer_aliases.source_url IS NOT NULL
-    ORDER BY retailer_aliases.id DESC
+    ORDER BY CASE WHEN retailer_aliases.alias_name = r.name THEN 0 ELSE 1 END,
+             retailer_aliases.id DESC
     LIMIT 1
 ) ra ON true
 WHERE cr.is_current = true;

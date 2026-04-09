@@ -7,6 +7,13 @@ from contextlib import contextmanager
 from typing import Optional
 import psycopg2
 from dotenv import load_dotenv
+from retailer_identity import (
+    get_domain_variant,
+    normalize_match_key,
+    resolve_canonical_name,
+    sanitize_store_name,
+    slugify,
+)
 
 load_dotenv()
 
@@ -50,43 +57,26 @@ def find_retailer_by_alias(conn, source_id: int, alias_name: str) -> Optional[in
 
 def normalize_name(name: str) -> str:
     """Normalize a retailer name for matching purposes."""
-    name = name.lower().strip()
-    # Remove common suffixes
-    for suffix in [".ca", ".com", " canada", " inc", " inc.", " ltd", " ltd."]:
-        name = name.replace(suffix, "")
-    # Remove "the " prefix
-    if name.startswith("the "):
-        name = name[4:]
-    # Remove non-alphanumeric (keep spaces)
-    name = re.sub(r"[^a-z0-9 ]", "", name)
-    # Collapse whitespace
-    name = re.sub(r"\s+", " ", name).strip()
-    return name
+    return normalize_match_key(name)
 
 
-def slugify(name: str) -> str:
-    """Create a URL-friendly slug from a retailer name."""
-    slug = name.lower().strip()
-    slug = re.sub(r"[^a-z0-9]+", "-", slug)
-    slug = slug.strip("-")
-    return slug
-
-
-def get_domain_variant(name: str) -> Optional[str]:
-    """Return an explicit domain variant marker when present in the store name."""
-    lowered = name.lower()
-    match = re.search(r"\.(ca|com)\b", lowered)
-    return match.group(1) if match else None
-
-
-def find_or_create_retailer(conn, store_name: str, source_id: int, source_url: str = None) -> int:
+def find_or_create_retailer(
+    conn,
+    store_name: str,
+    source_id: int,
+    source_slug: str,
+    source_url: str = None,
+) -> int:
     """
     Find an existing retailer by alias or normalized name, or create a new one.
     Also ensures the alias mapping exists for this source.
     Returns the retailer ID.
     """
-    # First check if we already have an alias for this exact name + source
-    retailer_id = find_retailer_by_alias(conn, source_id, store_name)
+    clean_store_name = sanitize_store_name(store_name)
+    canonical_store_name = resolve_canonical_name(source_slug, clean_store_name)
+
+    # First check if we already have an alias for this exact clean name + source
+    retailer_id = find_retailer_by_alias(conn, source_id, clean_store_name)
     if retailer_id:
         if source_url:
             with conn.cursor() as cur:
@@ -94,23 +84,27 @@ def find_or_create_retailer(conn, store_name: str, source_id: int, source_url: s
                     """UPDATE retailer_aliases
                        SET source_url = %s
                        WHERE source_id = %s AND alias_name = %s""",
-                    (source_url, source_id, store_name),
+                    (source_url, source_id, clean_store_name),
                 )
         return retailer_id
 
     # Try to find by normalized name
-    normalized = normalize_name(store_name)
+    normalized = normalize_name(canonical_store_name)
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT id, name FROM retailers WHERE normalized_name = %s ORDER BY id LIMIT 1",
-            (normalized,),
+            """SELECT id, name
+               FROM retailers
+               WHERE normalized_name = %s
+               ORDER BY CASE WHEN name = %s THEN 0 ELSE 1 END, id
+               LIMIT 1""",
+            (normalized, canonical_store_name),
         )
         row = cur.fetchone()
 
         if row:
             existing_retailer_id, existing_name = row
             existing_variant = get_domain_variant(existing_name)
-            incoming_variant = get_domain_variant(store_name)
+            incoming_variant = get_domain_variant(clean_store_name)
 
             # Keep explicit .ca and .com storefronts separate unless they match exactly.
             if existing_variant and incoming_variant and existing_variant != incoming_variant:
@@ -125,7 +119,7 @@ def find_or_create_retailer(conn, store_name: str, source_id: int, source_url: s
                    VALUES (%s, %s, %s)
                    ON CONFLICT (slug) DO UPDATE SET slug = retailers.slug
                    RETURNING id""",
-                (slugify(store_name), store_name, normalized),
+                (slugify(canonical_store_name), canonical_store_name, normalized),
             )
             retailer_id = cur.fetchone()[0]
         else:
@@ -136,7 +130,7 @@ def find_or_create_retailer(conn, store_name: str, source_id: int, source_url: s
             """INSERT INTO retailer_aliases (retailer_id, source_id, alias_name, source_url)
                VALUES (%s, %s, %s, %s)
                ON CONFLICT (source_id, alias_name) DO UPDATE SET source_url = EXCLUDED.source_url""",
-            (retailer_id, source_id, store_name, source_url),
+            (retailer_id, source_id, clean_store_name, source_url),
         )
 
     return retailer_id
