@@ -22,30 +22,50 @@ async function FeaturedRetailersSection() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-gray-950">
-            Popular retailers
+            Most viewed stores
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Sorted by how often visitors look them up.
+            Top {retailers.length} stores by visitor traffic.
           </p>
         </div>
-        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
-          {retailers.length} shown
-        </span>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {retailers.map((retailer) => (
-          <Link
-            key={retailer.id}
-            href={`/store/${retailer.slug}`}
-            className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm transition hover:border-blue-200 hover:bg-blue-50"
-          >
-            <div className="font-medium text-gray-900">{retailer.name}</div>
-            <div className="mt-1 text-xs text-gray-400">
-              {retailer.category ?? 'Retailer'}
-            </div>
-          </Link>
-        ))}
+      <div className="mt-5 overflow-hidden rounded-xl border border-gray-200">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+              <th className="w-10 px-4 py-3 text-center">#</th>
+              <th className="px-4 py-3">Store</th>
+              <th className="px-4 py-3 text-right">Best Rate</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {retailers.map((retailer, index) => (
+              <tr key={retailer.id} className="hover:bg-gray-50">
+                <td className="px-4 py-2.5 text-center text-xs font-medium text-gray-400">
+                  {index + 1}
+                </td>
+                <td className="px-4 py-2.5">
+                  <Link
+                    href={`/store/${retailer.slug}`}
+                    className="font-medium text-blue-600 hover:underline"
+                  >
+                    {retailer.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-2.5 text-right">
+                  {retailer.best_rate ? (
+                    <span className="font-medium text-green-700">
+                      {retailer.best_rate}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   )

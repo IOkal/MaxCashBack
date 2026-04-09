@@ -166,17 +166,41 @@ export async function getAllRetailers(): Promise<Retailer[]> {
   return data ?? []
 }
 
-export async function getFeaturedRetailers(limit = 24): Promise<Retailer[]> {
-  const { data, error } = await supabase
+export type PopularRetailer = Retailer & {
+  best_rate: string | null
+}
+
+export async function getFeaturedRetailers(limit = 30): Promise<PopularRetailer[]> {
+  const { data: retailers, error } = await supabase
     .from('popular_retailers')
     .select('id, name, slug, category')
     .limit(limit)
 
-  if (error) {
-    console.error('[db] getFeaturedRetailers failed:', error.message)
+  if (error || !retailers?.length) {
+    console.error('[db] getFeaturedRetailers failed:', error?.message)
     return []
   }
-  return data ?? []
+
+  // Fetch best rate per retailer in one query
+  const slugs = retailers.map((r) => r.slug)
+  const { data: rates } = await supabase
+    .from('current_rates')
+    .select('retailer_slug, rate_display, effective_cash_percentage')
+    .in('retailer_slug', slugs)
+    .order('effective_cash_percentage', { ascending: false, nullsFirst: false })
+
+  // Group: keep only the best rate per retailer
+  const bestBySlug = new Map<string, string>()
+  for (const rate of rates ?? []) {
+    if (!bestBySlug.has(rate.retailer_slug)) {
+      bestBySlug.set(rate.retailer_slug, rate.rate_display ?? `${rate.effective_cash_percentage}%`)
+    }
+  }
+
+  return retailers.map((r) => ({
+    ...r,
+    best_rate: bestBySlug.get(r.slug) ?? null,
+  }))
 }
 
 export async function getRetailerBySlug(slug: string): Promise<Retailer | null> {
