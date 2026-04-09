@@ -47,14 +47,30 @@ CREATE TABLE IF NOT EXISTS cashback_rates (
     is_up_to BOOLEAN NOT NULL DEFAULT false,   -- Whether the rate is an "up to" maximum
     is_current BOOLEAN NOT NULL DEFAULT true,  -- Flag for the latest rate
     scraped_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE cashback_rates
+    ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+
+UPDATE cashback_rates
+SET last_seen_at = COALESCE(last_seen_at, scraped_at)
+WHERE last_seen_at IS NULL;
+
+ALTER TABLE cashback_rates
+    ALTER COLUMN last_seen_at SET DEFAULT NOW();
+
+ALTER TABLE cashback_rates
+    ALTER COLUMN last_seen_at SET NOT NULL;
 
 -- Indexes for the main query patterns
 CREATE INDEX IF NOT EXISTS idx_cashback_rates_retailer_current
     ON cashback_rates(retailer_id, is_current) WHERE is_current = true;
 CREATE INDEX IF NOT EXISTS idx_cashback_rates_source
     ON cashback_rates(source_id);
+CREATE INDEX IF NOT EXISTS idx_cashback_rates_retailer_scraped
+    ON cashback_rates(retailer_id, scraped_at DESC);
 CREATE INDEX IF NOT EXISTS idx_retailers_normalized_name
     ON retailers(normalized_name);
 CREATE INDEX IF NOT EXISTS idx_retailers_slug
@@ -103,7 +119,8 @@ SELECT
         WHEN cr.rate_type = 'points_per_dollar' AND s.points_value_cents IS NOT NULL
             THEN cr.rate_value * s.points_value_cents
         ELSE NULL
-    END AS effective_cash_percentage
+    END AS effective_cash_percentage,
+    cr.last_seen_at
 FROM cashback_rates cr
 JOIN retailers r ON r.id = cr.retailer_id
 JOIN sources s ON s.id = cr.source_id
@@ -117,3 +134,29 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) ra ON true
 WHERE cr.is_current = true;
+
+CREATE OR REPLACE VIEW historical_rates AS
+SELECT
+    r.id AS retailer_id,
+    r.slug AS retailer_slug,
+    r.name AS retailer_name,
+    s.slug AS source_slug,
+    s.name AS source_name,
+    cr.rate_value,
+    cr.rate_type,
+    cr.rate_display,
+    cr.is_up_to,
+    cr.scraped_at,
+    cr.last_seen_at,
+    CASE
+        WHEN cr.rate_type = 'percentage' THEN cr.rate_value
+        WHEN cr.rate_type = 'points_per_dollar' AND s.points_value_cents IS NOT NULL
+            THEN cr.rate_value * s.points_value_cents
+        ELSE NULL
+    END AS effective_cash_percentage
+FROM cashback_rates cr
+JOIN retailers r ON r.id = cr.retailer_id
+JOIN sources s ON s.id = cr.source_id;
+
+GRANT SELECT ON current_rates TO anon, authenticated;
+GRANT SELECT ON historical_rates TO anon, authenticated;

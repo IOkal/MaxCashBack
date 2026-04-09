@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import AdSlot from '@/components/AdSlot'
-import { getRetailerBySlug, getStoreRates } from '@/lib/db'
-import type { CashbackRate } from '@/lib/db'
+import { getRetailerBySlug, getStoreRateHistory, getStoreRates } from '@/lib/db'
+import type { CashbackRate, StoreHistoryPoint, StoreRateHistory } from '@/lib/db'
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -55,11 +55,144 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hours / 24)}d ago`
 }
 
+function formatSignedPercentage(value: number | null): string {
+  if (value == null) return 'N/A'
+  if (value === 0) return '0.00%'
+  return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
+}
+
+function buildSparklinePath(points: StoreHistoryPoint[], width: number, height: number): string {
+  if (points.length === 0) return ''
+
+  const values = points.map((point) => point.effective_cash_percentage)
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min || 1
+  const horizontalStep = points.length > 1 ? (width - 24) / (points.length - 1) : 0
+
+  return points
+    .map((point, index) => {
+      const x = 12 + index * horizontalStep
+      const y = 12 + ((max - point.effective_cash_percentage) / range) * (height - 24)
+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
+    })
+    .join(' ')
+}
+
+function HistoryCard({ history }: { history: StoreRateHistory }) {
+  if (history.points.length === 0) return null
+
+  const path = buildSparklinePath(history.points, 640, 180)
+  const latestPoints = history.points.slice(-7).reverse()
+
+  return (
+    <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-950">30-day best-rate history</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Daily snapshot of the best effective cashback rate across all tracked portals.
+          </p>
+        </div>
+        <div className="text-sm text-gray-500">
+          {history.points[0]?.label} to {history.points.at(-1)?.label}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-4">
+        <div className="rounded-lg bg-gray-50 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-gray-400">Current</div>
+          <div className="mt-1 text-xl font-semibold text-gray-950">
+            {history.current?.effective_cash_percentage.toFixed(2)}%
+          </div>
+        </div>
+        <div className="rounded-lg bg-gray-50 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-gray-400">30-day high</div>
+          <div className="mt-1 text-xl font-semibold text-gray-950">
+            {history.high?.toFixed(2)}%
+          </div>
+        </div>
+        <div className="rounded-lg bg-gray-50 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-gray-400">30-day low</div>
+          <div className="mt-1 text-xl font-semibold text-gray-950">
+            {history.low?.toFixed(2)}%
+          </div>
+        </div>
+        <div className="rounded-lg bg-gray-50 px-4 py-3">
+          <div className="text-xs uppercase tracking-wide text-gray-400">30-day delta</div>
+          <div className="mt-1 text-xl font-semibold text-gray-950">
+            {formatSignedPercentage(history.delta)}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-lg border border-gray-200 bg-gradient-to-b from-gray-50 to-white p-3">
+        <svg
+          viewBox="0 0 640 180"
+          className="h-40 w-full"
+          role="img"
+          aria-label="30-day best rate trend"
+        >
+          <path
+            d={path}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            className="text-blue-600"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {history.points.length > 0 && (
+            <circle
+              cx={history.points.length > 1 ? 628 : 12}
+              cy={
+                12 +
+                ((Math.max(...history.points.map((point) => point.effective_cash_percentage)) -
+                  history.points[history.points.length - 1].effective_cash_percentage) /
+                  (Math.max(...history.points.map((point) => point.effective_cash_percentage)) -
+                    Math.min(...history.points.map((point) => point.effective_cash_percentage)) ||
+                    1)) *
+                  (180 - 24)
+              }
+              r="4"
+              className="fill-blue-600"
+            />
+          )}
+        </svg>
+      </div>
+
+      <div className="mt-5 overflow-hidden rounded-lg border border-gray-200">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+              <th className="px-4 py-3 text-left">Day</th>
+              <th className="px-4 py-3 text-left">Best rate</th>
+              <th className="px-4 py-3 text-left">Portal</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {latestPoints.map((point) => (
+              <tr key={point.date}>
+                <td className="px-4 py-3 text-gray-600">{point.label}</td>
+                <td className="px-4 py-3 font-medium text-gray-950">
+                  {point.rate_display ?? `${point.effective_cash_percentage.toFixed(2)}%`}
+                </td>
+                <td className="px-4 py-3 text-gray-600">{point.source_name}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
 async function StoreContent({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const [retailer, rates] = await Promise.all([
+  const [retailer, rates, history] = await Promise.all([
     getRetailerBySlug(slug),
     getStoreRates(slug),
+    getStoreRateHistory(slug),
   ])
 
   if (!retailer) notFound()
@@ -94,6 +227,8 @@ async function StoreContent({ params }: { params: Promise<{ slug: string }> }) {
           )}
 
           <AdSlot placement="store_inline" />
+
+          <HistoryCard history={history} />
 
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
             <table className="w-full text-sm">
@@ -140,7 +275,7 @@ async function StoreContent({ params }: { params: Promise<{ slug: string }> }) {
                       {rate.rate_type === 'points_per_dollar' ? 'Points' : rate.rate_type}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-400">
-                      {timeAgo(rate.scraped_at)}
+                      {timeAgo(rate.last_seen_at)}
                     </td>
                   </tr>
                 ))}

@@ -50,13 +50,14 @@ class BaseScraper(abc.ABC):
         with get_connection() as conn:
             source_id = get_source_id(conn, self.SOURCE_SLUG)
             inserted = 0
+            refreshed = 0
 
             for rate in rates:
                 try:
                     retailer_id = find_or_create_retailer(
                         conn, rate.store_name, source_id, rate.source_url
                     )
-                    upsert_cashback_rate(
+                    changed = upsert_cashback_rate(
                         conn,
                         retailer_id=retailer_id,
                         source_id=source_id,
@@ -65,8 +66,13 @@ class BaseScraper(abc.ABC):
                         rate_display=rate.rate_display,
                         is_up_to=rate.is_up_to,
                     )
-                    inserted += 1
+                    if changed:
+                        inserted += 1
+                    else:
+                        refreshed += 1
                 except Exception as e:
                     self.logger.error(f"Error processing {rate.store_name}: {e}")
 
-            self.logger.info(f"Inserted/updated {inserted}/{len(rates)} rates into DB")
+            self.logger.info(
+                f"Inserted {inserted} changed rates and refreshed {refreshed} unchanged rates out of {len(rates)}"
+            )

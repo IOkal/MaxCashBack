@@ -154,9 +154,36 @@ def upsert_cashback_rate(
     """
     Insert a new cashback rate and mark it as current.
     Marks previous rates for the same retailer+source as not current.
+    If the latest current row is unchanged, only refresh last_seen_at.
     """
     now = datetime.now(timezone.utc)
     with conn.cursor() as cur:
+        cur.execute(
+            """SELECT id, rate_value, rate_type, rate_display, is_up_to
+               FROM cashback_rates
+               WHERE retailer_id = %s AND source_id = %s AND is_current = true
+               ORDER BY scraped_at DESC
+               LIMIT 1""",
+            (retailer_id, source_id),
+        )
+        current_row = cur.fetchone()
+
+        if current_row:
+            current_id, current_value, current_type, current_display, current_is_up_to = current_row
+            if (
+                float(current_value) == float(rate_value)
+                and current_type == rate_type
+                and current_display == rate_display
+                and bool(current_is_up_to) == bool(is_up_to)
+            ):
+                cur.execute(
+                    """UPDATE cashback_rates
+                       SET last_seen_at = %s
+                       WHERE id = %s""",
+                    (now, current_id),
+                )
+                return False
+
         # Mark old rates as not current
         cur.execute(
             """UPDATE cashback_rates
@@ -167,7 +194,9 @@ def upsert_cashback_rate(
         # Insert new rate
         cur.execute(
             """INSERT INTO cashback_rates
-               (retailer_id, source_id, rate_value, rate_type, rate_display, is_up_to, is_current, scraped_at)
-               VALUES (%s, %s, %s, %s, %s, %s, true, %s)""",
-            (retailer_id, source_id, rate_value, rate_type, rate_display, is_up_to, now),
+               (retailer_id, source_id, rate_value, rate_type, rate_display, is_up_to, is_current, scraped_at, last_seen_at)
+               VALUES (%s, %s, %s, %s, %s, %s, true, %s, %s)""",
+            (retailer_id, source_id, rate_value, rate_type, rate_display, is_up_to, now, now),
         )
+
+    return True
