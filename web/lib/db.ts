@@ -56,6 +56,12 @@ export type StoreRateHistory = {
   current: StoreHistoryPoint | null
 }
 
+export type SiteStatus = {
+  trackedStores: number
+  trackedPortals: number
+  latestUpdate: string | null
+}
+
 function startOfUtcDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
 }
@@ -356,4 +362,38 @@ export async function getHighestEarnRates(limit = 30): Promise<CashbackRate[]> {
     return []
   }
   return data ?? []
+}
+
+export async function getSiteStatus(): Promise<SiteStatus> {
+  const [retailersResult, sourcesResult, freshnessResult] = await Promise.all([
+    supabase.from('retailers').select('*', { count: 'exact', head: true }),
+    supabase
+      .from('sources')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true),
+    supabase
+      .from('current_rates')
+      .select('last_seen_at')
+      .order('last_seen_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+
+  if (retailersResult.error) {
+    console.error('[db] getSiteStatus retailers failed:', retailersResult.error.message)
+  }
+
+  if (sourcesResult.error) {
+    console.error('[db] getSiteStatus sources failed:', sourcesResult.error.message)
+  }
+
+  if (freshnessResult.error) {
+    console.error('[db] getSiteStatus freshness failed:', freshnessResult.error.message)
+  }
+
+  return {
+    trackedStores: retailersResult.count ?? 0,
+    trackedPortals: sourcesResult.count ?? 0,
+    latestUpdate: freshnessResult.data?.last_seen_at ?? null,
+  }
 }

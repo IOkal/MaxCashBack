@@ -5,6 +5,7 @@ import SearchBox from '@/components/SearchBox'
 import {
   getFeaturedRetailers,
   getHighestEarnRates,
+  getSiteStatus,
   type CashbackRate,
 } from '@/lib/db'
 
@@ -134,6 +135,30 @@ async function HighestEarnRatesSection() {
   )
 }
 
+function formatStatusTimestamp(dateString: string | null): string {
+  if (!dateString) return 'Unavailable'
+
+  return new Intl.DateTimeFormat('en-CA', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'UTC',
+  }).format(new Date(dateString))
+}
+
+async function SiteStatusSection() {
+  const status = await getSiteStatus()
+
+  return (
+    <section className="text-sm text-gray-500">
+      <p>
+        Last update: {formatStatusTimestamp(status.latestUpdate)} UTC ·{' '}
+        {status.trackedStores.toLocaleString('en-CA')} stores ·{' '}
+        {status.trackedPortals.toLocaleString('en-CA')} portals tracked. Verify final portal terms before you buy.
+      </p>
+    </section>
+  )
+}
+
 function SearchSkeleton() {
   return (
     <div className="w-full max-w-xl animate-pulse rounded-lg border border-gray-200 bg-gray-100 py-3 px-4 text-transparent">
@@ -182,6 +207,10 @@ export default function HomePage() {
           <HighestEarnRatesSection />
         </Suspense>
       </div>
+
+      <Suspense fallback={<div className="h-5" />}>
+        <SiteStatusSection />
+      </Suspense>
 
       <AdSlot placement="homepage_inline" />
     </div>

@@ -63,6 +63,20 @@ function formatSignedPercentage(value: number | null): string {
   return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
 }
 
+function buildReportIssueHref(retailerName: string, slug: string): string {
+  const params = new URLSearchParams({
+    subject: `Issue with ${retailerName} on MaxCashBack`,
+    body: [
+      `Store: ${retailerName}`,
+      `Page: https://maxcashback.ca/store/${slug}`,
+      '',
+      'Issue details:',
+    ].join('\n'),
+  })
+
+  return `mailto:help@maxcashback.ca?${params.toString()}`
+}
+
 function buildSparklinePath(points: StoreHistoryPoint[], width: number, height: number): string {
   if (points.length === 0) return ''
 
@@ -212,6 +226,7 @@ async function StoreContent({ params }: { params: Promise<{ slug: string }> }) {
   })
 
   const bestRate = rates[0] ?? null
+  const reportIssueHref = buildReportIssueHref(retailer.name, slug)
 
   return (
     <div className="space-y-6">
@@ -220,6 +235,16 @@ async function StoreContent({ params }: { params: Promise<{ slug: string }> }) {
         {retailer.category && (
           <p className="mt-1 text-sm text-gray-500">{retailer.category}</p>
         )}
+        <p className="mt-2 text-sm text-gray-500">
+          Spot a stale rate, duplicate store, or broken portal link?{' '}
+          <a
+            href={reportIssueHref}
+            className="font-medium text-blue-600 hover:underline"
+          >
+            Report an issue
+          </a>
+          .
+        </p>
       </div>
 
       {rates.length === 0 ? (
