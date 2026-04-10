@@ -16,6 +16,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 1,
     },
+    {
+      url: 'https://maxcashback.ca/about',
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: 'https://maxcashback.ca/contact',
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
     ...storeUrls,
   ]
 }

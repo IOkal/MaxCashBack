@@ -67,8 +67,21 @@ export default function RootLayout({
           </div>
         </header>
         <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
-        <footer className="mt-auto border-t bg-white py-6 text-center text-xs text-gray-400">
-          Rates scraped daily. Always verify before purchasing.
+        <footer className="mt-auto border-t bg-white py-6">
+          <div className="mx-auto flex max-w-4xl flex-col items-center gap-3 px-4 text-center text-xs text-gray-400">
+            <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-gray-500">
+              <Link href="/" className="hover:text-blue-600">
+                Home
+              </Link>
+              <Link href="/about" className="hover:text-blue-600">
+                About
+              </Link>
+              <Link href="/contact" className="hover:text-blue-600">
+                Contact
+              </Link>
+            </nav>
+            <p>Rates scraped daily. Always verify before purchasing.</p>
+          </div>
         </footer>
         <Suspense fallback={null}>
           <GoogleAnalytics />
