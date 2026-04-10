@@ -9,6 +9,7 @@ import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
 const googleSiteVerification = process.env.GOOGLE_SITE_VERIFICATION?.trim()
+const currentYear = new Date().getFullYear()
 
 export const metadata: Metadata = {
   title: {
@@ -79,8 +80,17 @@ export default function RootLayout({
               <Link href="/contact" className="hover:text-blue-600">
                 Contact
               </Link>
+              <Link href="/privacy" className="hover:text-blue-600">
+                Privacy Policy
+              </Link>
+              <Link href="/disclaimer" className="hover:text-blue-600">
+                Disclaimer
+              </Link>
             </nav>
-            <p>Rates scraped daily. Always verify before purchasing.</p>
+            <div className="space-y-1">
+              <p>Rates scraped daily. Always verify before purchasing.</p>
+              <p>&copy; {currentYear} MaxCashBack. All rights reserved.</p>
+            </div>
           </div>
         </footer>
         <Suspense fallback={null}>
