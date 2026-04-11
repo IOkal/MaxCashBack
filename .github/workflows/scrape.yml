@@ -62,8 +62,26 @@ jobs:
           cd scrapers
           python tcb_scraper.py
 
+      - name: Run Swagbucks scraper
+        id: swagbucks
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd scrapers
+          python swagbucks_scraper.py
+
+      - name: Run Air Miles scraper
+        id: airmiles
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd scrapers
+          python airmiles_scraper.py
+
       - name: Alert on scraper failure
-        if: steps.gcr.outcome == 'failure' || steps.rakuten.outcome == 'failure' || steps.aeroplan.outcome == 'failure' || steps.tcb.outcome == 'failure'
+        if: steps.gcr.outcome == 'failure' || steps.rakuten.outcome == 'failure' || steps.aeroplan.outcome == 'failure' || steps.tcb.outcome == 'failure' || steps.swagbucks.outcome == 'failure' || steps.airmiles.outcome == 'failure'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -72,6 +90,8 @@ jobs:
           [ "${{ steps.rakuten.outcome }}" = "failure" ] && FAILED="$FAILED- Rakuten\n"
           [ "${{ steps.aeroplan.outcome }}" = "failure" ] && FAILED="$FAILED- Aeroplan\n"
           [ "${{ steps.tcb.outcome }}" = "failure" ] && FAILED="$FAILED- TopCashback\n"
+          [ "${{ steps.swagbucks.outcome }}" = "failure" ] && FAILED="$FAILED- Swagbucks\n"
+          [ "${{ steps.airmiles.outcome }}" = "failure" ] && FAILED="$FAILED- Air Miles\n"
 
           gh issue create \
             --title "Scraper failure on $(date -u +%Y-%m-%d %H:%M UTC)" \

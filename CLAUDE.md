@@ -13,7 +13,10 @@ Users search for a retailer (e.g. "Amazon") and see a comparison table of cashba
 3. **Aeroplan eStore** — Points per dollar (Aeroplan points). ~200 stores. JS-rendered.
 4. **TopCashback Canada** — Cash back (percentage or fixed amount). ~220 stores in the Canada category. Traditional HTML, paginated category pages.
 
-Future additions: Swagbucks Canada, credit card shopping portals (RBC, TD, etc.)
+5. **Swagbucks** — Cash back (percentage). ~1,500 stores. Server-rendered HTML with embedded JSON, paginated A-Z directory.
+6. **Air Miles Shops** — Points per dollar (Air Miles, ~10.5¢ each). JS-rendered React app at airmilesshops.ca.
+
+Future additions: credit card shopping portals (RBC, TD, etc.)
 
 ## Architecture
 
@@ -50,6 +53,8 @@ MaxCashBack/
 │   ├── gcr_scraper.py         # Great Canadian Rebates scraper
 │   ├── aeroplan_scraper.py    # Aeroplan eStore scraper
 │   ├── tcb_scraper.py         # TopCashback Canada scraper
+│   ├── swagbucks_scraper.py   # Swagbucks scraper
+│   ├── airmiles_scraper.py    # Air Miles Shops scraper
 │   ├── retailer_identity.py   # Shared alias resolution + normalization helpers
 │   └── db.py                  # Database connection & upsert helpers
 ├── web/                       # Next.js frontend
@@ -74,7 +79,7 @@ MaxCashBack/
 ### Database Schema (PostgreSQL)
 
 Four main tables:
-- **sources** — Cashback portals (Rakuten, GCR, Aeroplan, TopCashback, etc.)
+- **sources** — Cashback portals (Rakuten, GCR, Aeroplan, TopCashback, Swagbucks, Air Miles)
 - **retailers** — Canonical retailer records (one per real store)
 - **retailer_aliases** — Maps variant names ("The Bay", "Hudson's Bay") to a single retailer
 - **cashback_rates** — Current and historical rates per retailer × source
@@ -114,6 +119,21 @@ Four main tables:
 - Server-rendered HTML with `?page=N` pagination
 - Category cards contain store name, listing cashback rate, and merchant detail URL
 - Use the category listing rate for now because the detail page can expose multiple sub-rates
+
+### Swagbucks
+- URL: https://www.swagbucks.com/shop/all-stores-coupons?type=all&letter={A-Z,1}
+- Server-rendered HTML with embedded `initialCardLoad` JavaScript object
+- A-Z paginated directory (27 pages: letters A-Z + "1" for numbers)
+- Each page embeds the first ~20 stores as JSON; total catalog is ~1,500 stores
+- Key fields: `header` (name), `cashBackPercent` (rate), `upTo` (bool), `detailsLink` (URL)
+- Rates are percentage-based ("X% Cash Back")
+
+### Air Miles Shops
+- URL: https://www.airmilesshops.ca/en/directory
+- JS-rendered React app (styled-components) — requires Playwright
+- Store directory shows grid of merchant logos linking to store detail pages
+- Rates in "miles per dollar" format (e.g., "1 Mile per $20 spent")
+- Air Miles Cash redemption: 95 miles = $10 → ~10.5¢ per mile
 
 ## Legacy Code
 

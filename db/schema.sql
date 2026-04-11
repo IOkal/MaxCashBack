@@ -83,7 +83,9 @@ INSERT INTO sources (slug, name, url, rate_type, points_value_cents) VALUES
     ('rakuten', 'Rakuten.ca', 'https://www.rakuten.ca', 'percentage', NULL),
     ('gcr', 'Great Canadian Rebates', 'https://www.greatcanadianrebates.ca', 'percentage', NULL),
     ('aeroplan', 'Aeroplan eStore', 'https://aeroplan.rewardops.com/en-CA/home/brands?view=list', 'points_per_dollar', 1.50),
-    ('tcb', 'TopCashback', 'https://www.topcashback.com/category/canada-retailers/', 'percentage', NULL)
+    ('tcb', 'TopCashback', 'https://www.topcashback.com/category/canada-retailers/', 'percentage', NULL),
+    ('swagbucks', 'Swagbucks', 'https://www.swagbucks.com/shop', 'percentage', NULL),
+    ('airmiles', 'Air Miles Shops', 'https://www.airmilesshops.ca/en/directory', 'points_per_dollar', 10.50)
 ON CONFLICT (slug) DO UPDATE SET
     name = EXCLUDED.name,
     url = EXCLUDED.url,
