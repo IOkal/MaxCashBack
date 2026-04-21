@@ -1,50 +1,75 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Retailer } from '@/lib/db'
+import StoreLogo from './StoreLogo'
 
-export default function SearchBox() {
+type SearchResult = {
+  id: number
+  name: string
+  slug: string
+  category: string | null
+}
+
+function scoreStore(name: string, qLower: string): number {
+  const lower = name.toLowerCase()
+  if (lower === qLower) return 1000
+  if (lower.startsWith(qLower)) return 500 - lower.length
+  const words = lower.split(/[\s.'\-]+/)
+  for (const w of words) if (w.startsWith(qLower)) return 300 - lower.length
+  const idx = lower.indexOf(qLower)
+  if (idx >= 0) return 100 - idx - lower.length * 0.1
+  return -1
+}
+
+function highlightMatch(text: string, query: string) {
+  if (!query) return <span>{text}</span>
+  const i = text.toLowerCase().indexOf(query.toLowerCase())
+  if (i < 0) return <span>{text}</span>
+  return (
+    <span>
+      {text.slice(0, i)}
+      <b className="font-semibold text-mcb-ink">{text.slice(i, i + query.length)}</b>
+      {text.slice(i + query.length)}
+    </span>
+  )
+}
+
+export default function SearchBox({ storeCount }: { storeCount?: number }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(-1)
-  const [matches, setMatches] = useState<Retailer[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [matches, setMatches] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const listRef = useRef<HTMLUListElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  function handleSelect(retailer: Retailer) {
-    setQuery('')
-    setMatches([])
-    setOpen(false)
-    router.push(`/store/${retailer.slug}`)
-  }
+  const countLabel = storeCount ? storeCount.toLocaleString() : '2,000+'
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open || matches.length === 0) return
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setActiveIndex((i) => Math.min(i + 1, matches.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActiveIndex((i) => Math.max(i - 1, 0))
-    } else if (e.key === 'Enter') {
-      e.preventDefault()
-      if (activeIndex >= 0) {
-        handleSelect(matches[activeIndex])
-      } else if (matches.length > 0) {
-        handleSelect(matches[0])
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        inputRef.current?.focus()
       }
-    } else if (e.key === 'Escape') {
-      setOpen(false)
     }
-  }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   useEffect(() => {
     const trimmed = query.trim()
-
     if (!trimmed) {
       setMatches([])
       setLoading(false)
@@ -54,33 +79,25 @@ export default function SearchBox() {
     const controller = new AbortController()
     const timeoutId = window.setTimeout(async () => {
       setLoading(true)
-
       try {
         const response = await fetch(
           `/api/retailers/search?q=${encodeURIComponent(trimmed)}`,
-          {
-            signal: controller.signal,
-            cache: 'no-store',
-          }
+          { signal: controller.signal, cache: 'no-store' }
         )
-
-        if (!response.ok) {
-          throw new Error(`Search request failed with ${response.status}`)
-        }
-
-        const payload = (await response.json()) as { retailers?: Retailer[] }
+        if (!response.ok) throw new Error(`${response.status}`)
+        const payload = (await response.json()) as { retailers?: SearchResult[] }
         if (!controller.signal.aborted) {
-          setMatches(payload.retailers ?? [])
+          const results = (payload.retailers ?? [])
+            .map(r => ({ ...r, _score: scoreStore(r.name, trimmed.toLowerCase()) }))
+            .sort((a, b) => b._score - a._score)
+            .slice(0, 8)
+          setMatches(results)
+          setActiveIndex(0)
         }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error('[SearchBox] retailer search failed:', error)
-          setMatches([])
-        }
+      } catch {
+        if (!controller.signal.aborted) setMatches([])
       } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false)
-        }
+        if (!controller.signal.aborted) setLoading(false)
       }
     }, 150)
 
@@ -90,74 +107,122 @@ export default function SearchBox() {
     }
   }, [query])
 
-  // Scroll active item into view
-  useEffect(() => {
-    if (activeIndex >= 0 && listRef.current) {
-      const item = listRef.current.children[activeIndex] as HTMLElement
-      item?.scrollIntoView({ block: 'nearest' })
+  const handleSelect = useCallback((result: SearchResult) => {
+    setQuery('')
+    setMatches([])
+    setOpen(false)
+    router.push(`/store/${result.slug}`)
+  }, [router])
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex(i => Math.min(i + 1, matches.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex(i => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (matches[activeIndex]) handleSelect(matches[activeIndex])
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+      inputRef.current?.blur()
     }
-  }, [activeIndex])
+  }
+
+  const hasQuery = query.trim().length > 0
+  const dropdownOpen = open && hasQuery
+  const showNoResults = hasQuery && !loading && matches.length === 0
 
   return (
-    <div className="relative w-full max-w-xl">
-      <input
-        ref={inputRef}
-        type="search"
-        value={query}
-        onChange={(e) => {
-          const nextQuery = e.target.value
-          setQuery(nextQuery)
-          setMatches([])
-          setActiveIndex(-1)
-          setOpen(true)
-          setLoading(nextQuery.trim().length > 0)
-        }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
-        onKeyDown={handleKeyDown}
-        placeholder="Search for a store… e.g. Amazon, Nike, Best Buy"
-        className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-        autoComplete="off"
-        spellCheck={false}
-      />
-
-      {open && matches.length > 0 && (
-        <ul
-          ref={listRef}
-          className="absolute z-10 mt-1 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg max-h-72"
-          role="listbox"
+    <div ref={wrapperRef} className="relative w-full" style={{ maxWidth: 760 }}>
+      <div className="flex items-center gap-3">
+        {/* Search input */}
+        <div
+          className={`relative flex h-16 flex-1 items-center gap-3 border-[1.5px] border-mcb-ink bg-mcb-bg px-5 ${
+            dropdownOpen ? 'rounded-t-xl border-b-transparent' : 'rounded-xl'
+          }`}
         >
-          {matches.map((r, i) => (
-            <li
-              key={r.id}
-              role="option"
-              aria-selected={i === activeIndex}
-              onMouseDown={() => handleSelect(r)}
-              onMouseEnter={() => setActiveIndex(i)}
-              className={`cursor-pointer px-4 py-2.5 text-sm ${
-                i === activeIndex ? 'bg-blue-50 text-blue-700' : 'text-gray-800 hover:bg-gray-50'
-              }`}
-            >
-              {r.name}
-              {r.category && (
-                <span className="ml-2 text-xs text-gray-400">{r.category}</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-mcb-ink">
+            <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={e => { setQuery(e.target.value); setOpen(true); setActiveIndex(0) }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={`Search ${countLabel} stores — adidas, HelloFresh, 1Password…`}
+            className="flex-1 bg-transparent text-[17px] text-mcb-ink outline-none placeholder:text-mcb-ink-mute"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <kbd className="hidden rounded border border-mcb-line bg-mcb-surface px-2 py-1 text-[11px] text-mcb-ink-mute sm:block">
+            ⌘ K
+          </kbd>
+
+          {/* Dropdown under input */}
+          {dropdownOpen && (
+            <div className="absolute left-[-1.5px] right-[-1.5px] top-[62px] z-20 overflow-hidden rounded-b-xl border-x-[1.5px] border-b-[1.5px] border-mcb-ink bg-mcb-surface shadow-[0_16px_36px_rgba(0,0,0,0.08)]">
+              {loading && matches.length === 0 && (
+                <div className="px-4 py-4 text-center text-[12px] text-mcb-ink-mute">
+                  Searching...
+                </div>
               )}
-            </li>
-          ))}
-        </ul>
-      )}
 
-      {open && loading && query.trim().length > 0 && matches.length === 0 && (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-lg">
-          Searching stores…
-        </div>
-      )}
+              {showNoResults && (
+                <div className="px-4 py-4">
+                  <div className="text-[13px] font-medium text-mcb-ink">
+                    No stores found for &ldquo;{query}&rdquo;
+                  </div>
+                  <div className="mt-1 text-[12px] text-mcb-ink-soft">
+                    Check your spelling, or{' '}
+                    <span className="border-b border-mcb-accent text-mcb-accent-ink">
+                      request this store &rarr;
+                    </span>
+                  </div>
+                </div>
+              )}
 
-      {open && !loading && query.trim().length > 0 && matches.length === 0 && (
-        <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-lg">
-          No stores found for &ldquo;{query}&rdquo;
+              {matches.map((r, i) => (
+                <div
+                  key={r.id}
+                  onMouseDown={() => handleSelect(r)}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  className={`flex cursor-pointer items-center gap-2.5 border-b border-mcb-line-soft px-4 py-2.5 last:border-b-0 ${
+                    i === activeIndex ? 'bg-mcb-bg' : 'bg-mcb-surface'
+                  }`}
+                >
+                  <StoreLogo name={r.name} size={24} />
+                  <div className="flex-1 truncate text-[14px] text-mcb-ink-soft">
+                    {highlightMatch(r.name, query)}
+                  </div>
+                  {i === activeIndex && (
+                    <kbd className="rounded border border-mcb-line px-1.5 py-0.5 text-[10px] text-mcb-ink-mute">↵</kbd>
+                  )}
+                </div>
+              ))}
+
+              {matches.length > 0 && (
+                <div className="flex justify-between border-t border-mcb-line-soft bg-mcb-bg px-4 py-2 text-[11px] text-mcb-ink-mute">
+                  <span>{matches.length} {matches.length === 1 ? 'match' : 'matches'}</span>
+                  <span>↑↓ navigate · ↵ open · esc close</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Search button */}
+        <button
+          type="button"
+          onClick={() => { if (matches[0]) handleSelect(matches[0]) }}
+          className="flex h-16 items-center rounded-xl bg-mcb-accent px-7 text-[15px] font-medium text-mcb-bg"
+        >
+          Search
+        </button>
+      </div>
     </div>
   )
 }

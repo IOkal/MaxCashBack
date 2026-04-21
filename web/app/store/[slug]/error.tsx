@@ -9,20 +9,18 @@ export default function StoreError({
   reset: () => void
 }) {
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/" className="text-sm text-blue-600 hover:underline">
-          ← Back to search
-        </Link>
-      </div>
-      <div className="flex flex-col items-center gap-4 py-16 text-center">
-        <h2 className="text-2xl font-bold">Couldn&apos;t load store data</h2>
-        <p className="text-gray-500">
+    <div className="mx-auto max-w-[1200px] px-5 py-16 md:px-10">
+      <Link href="/" className="text-[13px] text-mcb-accent-ink hover:underline">
+        &larr; Back to search
+      </Link>
+      <div className="mt-8 flex flex-col items-center gap-4 text-center">
+        <h2 className="font-serif text-2xl text-mcb-ink">Couldn&apos;t load store data</h2>
+        <p className="text-mcb-ink-soft">
           This is likely a temporary issue. The rates you&apos;d see here are at most 12 hours old.
         </p>
         <button
           onClick={reset}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-lg bg-mcb-ink px-4 py-2 text-sm font-medium text-mcb-bg hover:opacity-90"
         >
           Try again
         </button>

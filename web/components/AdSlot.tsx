@@ -12,9 +12,16 @@ declare global {
 type AdSlotProps = {
   placement: AdPlacement
   className?: string
+  label?: string
+  size?: string
 }
 
-export default function AdSlot({ placement, className = '' }: AdSlotProps) {
+export default function AdSlot({
+  placement,
+  className = '',
+  label = 'Advertisement',
+  size,
+}: AdSlotProps) {
   const pushedRef = useRef(false)
   const slot = getAdSlot(placement)
   const enabled = isAdPlacementEnabled(placement)
@@ -22,26 +29,35 @@ export default function AdSlot({ placement, className = '' }: AdSlotProps) {
   useEffect(() => {
     if (!enabled || pushedRef.current || typeof window === 'undefined') return
 
-    try {
-      window.adsbygoogle = window.adsbygoogle || []
-      window.adsbygoogle.push({})
-      pushedRef.current = true
-    } catch (error) {
-      console.error(`Failed to initialize AdSense slot for ${placement}`, error)
-    }
+    // Defer push until the ad container is visible and has a non-zero width
+    const timer = window.setTimeout(() => {
+      try {
+        window.adsbygoogle = window.adsbygoogle || []
+        window.adsbygoogle.push({})
+        pushedRef.current = true
+      } catch {
+        // AdSense may throw if the slot was already filled or has no width — safe to ignore
+      }
+    }, 100)
+
+    return () => window.clearTimeout(timer)
   }, [enabled, placement])
 
   if (!enabled) return null
 
   return (
     <aside
-      className={`rounded-2xl border border-gray-200 bg-white p-4 shadow-sm ${className}`.trim()}
+      className={`flex flex-col items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-mcb-line bg-mcb-ad-bg ${className}`.trim()}
       aria-label="Advertisement"
+      style={{ minHeight: 120 }}
     >
-      <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-        Advertisement
+      <p className="text-[10px] uppercase tracking-[1.2px] text-mcb-ink-mute">
+        {label}
       </p>
-      <div className="min-h-[140px]">
+      {size && (
+        <p className="text-[13px] font-medium text-mcb-ink-soft">{size}</p>
+      )}
+      <div className="min-h-[90px]">
         <ins
           className="adsbygoogle block"
           style={{ display: 'block' }}

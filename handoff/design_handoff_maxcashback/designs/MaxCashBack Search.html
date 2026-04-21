@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MaxCashBack — Search</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { background: #f0eee9; }
+  * { box-sizing: border-box; }
+  @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="data.js"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="direction-a.jsx"></script>
+<script type="text/babel" src="search.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+function App() {
+  const [query, setQuery] = React.useState("lul");
+  return (
+    <DesignCanvas>
+      <DCSection
+        title="Search — inline autocomplete"
+        subtitle="Name-only results, cap 8, prefix-weighted scoring. No results page, no filters. Fast."
+      >
+        <DCArtboard label="01 · Focused, empty query" width={1200} height={420}>
+          <SearchFrame state="focus-empty" query="" />
+        </DCArtboard>
+        <DCArtboard label="02 · Typing — matches found" width={1200} height={420}>
+          <SearchFrame state="typing" query="lul" />
+        </DCArtboard>
+        <DCArtboard label="03 · Typing — single word match" width={1200} height={420}>
+          <SearchFrame state="typing" query="vpn" />
+        </DCArtboard>
+        <DCArtboard label="04 · No results" width={1200} height={420}>
+          <SearchFrame state="typing" query="xyzabc" />
+        </DCArtboard>
+      </DCSection>
+
+      {/* Live playground */}
+      <DCSection title="Live playground" subtitle="Type below to see the autocomplete respond. Keyboard stays in sync.">
+        <DCArtboard label="Try it" width={1200} height={480}>
+          <div style={{ width: 1200, background: "oklch(0.985 0.004 90)" }}>
+            <div style={{ height: 64, borderBottom: "1px solid oklch(0.92 0.005 80)", display: "flex", alignItems: "center", padding: "0 40px", background: "#fff" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 7, background: "oklch(0.18 0.01 80)", display: "flex", alignItems: "center", justifyContent: "center", color: "oklch(0.985 0.004 90)", fontFamily: '"Instrument Serif", serif', fontSize: 18, fontStyle: "italic" }}>m</div>
+                <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 15, color: "oklch(0.18 0.01 80)" }}>MaxCashBack</div>
+              </div>
+              <div style={{ marginLeft: 32, position: "relative", width: 520 }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  background: "#fff", border: `1.5px solid oklch(0.18 0.01 80)`,
+                  borderRadius: query ? "10px 10px 0 0" : 10,
+                  borderBottomColor: query ? "transparent" : "oklch(0.92 0.005 80)",
+                  padding: "0 14px", height: 42,
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="oklch(0.18 0.01 80)" strokeWidth="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Search 2,081 stores…" style={{
+                    flex: 1, border: "none", outline: "none", background: "transparent",
+                    fontFamily: "Inter, sans-serif", fontSize: 14, color: "oklch(0.18 0.01 80)",
+                  }}/>
+                  {query && <div onClick={() => setQuery("")} style={{ cursor: "pointer", fontFamily: "Inter, sans-serif", fontSize: 11, color: "oklch(0.62 0.01 80)", padding: "3px 6px" }}>✕</div>}
+                </div>
+                {query && (() => {
+                  const results = searchStores(query);
+                  return (
+                    <div style={{
+                      position: "absolute", top: 42, left: 0, right: 0,
+                      background: "#fff",
+                      border: `1.5px solid oklch(0.18 0.01 80)`, borderTop: "none",
+                      borderRadius: "0 0 10px 10px",
+                      boxShadow: "0 16px 36px rgba(0,0,0,0.08)",
+                      overflow: "hidden",
+                    }}>
+                      {results.length === 0 ? (
+                        <div style={{ padding: "18px 16px" }}>
+                          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "oklch(0.18 0.01 80)", fontWeight: 500, marginBottom: 4 }}>No stores found for "{query}"</div>
+                          <div style={{ fontFamily: "Inter, sans-serif", fontSize: 12, color: "oklch(0.45 0.01 80)" }}>
+                            <span style={{ color: "oklch(0.35 0.08 185)", borderBottom: "1px solid oklch(0.58 0.11 185)", paddingBottom: 1 }}>Request this store →</span>
+                          </div>
+                        </div>
+                      ) : (
+                        results.map((r, i) => (
+                          <div key={r.name} style={{
+                            display: "flex", alignItems: "center", gap: 10,
+                            padding: "9px 14px",
+                            background: i === 0 ? "oklch(0.985 0.004 90)" : "#fff",
+                            borderBottom: i === results.length - 1 ? "none" : "1px solid oklch(0.95 0.004 80)",
+                            fontFamily: "Inter, sans-serif",
+                          }}>
+                            <QStoreLogo name={r.name} />
+                            <div style={{ flex: 1, fontSize: 14, color: "oklch(0.45 0.01 80)" }}>
+                              <Highlight text={r.name} q={query} />
+                            </div>
+                            {i === 0 && <div style={{ fontSize: 10, color: "oklch(0.62 0.01 80)", border: "1px solid oklch(0.92 0.005 80)", borderRadius: 3, padding: "1px 5px" }}>↵</div>}
+                          </div>
+                        ))
+                      )}
+                      {results.length > 0 && (
+                        <div style={{ padding: "8px 14px", background: "oklch(0.985 0.004 90)", borderTop: "1px solid oklch(0.95 0.004 80)", fontFamily: "Inter, sans-serif", fontSize: 11, color: "oklch(0.62 0.01 80)", display: "flex", justifyContent: "space-between" }}>
+                          <span>{results.length} {results.length === 1 ? "match" : "matches"}</span>
+                          <span>↑↓ navigate · ↵ open · esc close</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCPostIt top={130} left={40} rotate={-3} width={240}>
+        Perf strategy:<br/>
+        • name-only, single-pass scorer<br/>
+        • O(n) score, sort top N, cap 8 rows<br/>
+        • prefix beats word-prefix beats substring<br/>
+        • no filters, no results page
+      </DCPostIt>
+    </DesignCanvas>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

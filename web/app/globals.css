@@ -1,1 +1,44 @@
 @import "tailwindcss";
+
+@theme {
+  --color-mcb-bg: oklch(0.985 0.004 90);
+  --color-mcb-surface: #ffffff;
+  --color-mcb-ink: oklch(0.18 0.01 80);
+  --color-mcb-ink-soft: oklch(0.45 0.01 80);
+  --color-mcb-ink-mute: oklch(0.62 0.01 80);
+  --color-mcb-line: oklch(0.92 0.005 80);
+  --color-mcb-line-soft: oklch(0.95 0.004 80);
+  --color-mcb-accent: oklch(0.58 0.11 185);
+  --color-mcb-accent-soft: oklch(0.94 0.03 185);
+  --color-mcb-accent-ink: oklch(0.35 0.08 185);
+  --color-mcb-pos: oklch(0.55 0.13 155);
+  --color-mcb-neg: oklch(0.58 0.18 25);
+  --color-mcb-ad-bg: oklch(0.97 0.006 85);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+}
+
+/* Portal brand colors as CSS custom properties */
+:root {
+  --portal-rakuten: #BF0000;
+  --portal-gcr: #006B3C;
+  --portal-swagbucks: #0A7AA6;
+  --portal-aeroplan: #D3273E;
+  --portal-topcashback: #E8344C;
+  --portal-drop: #6B4FBB;
+  --portal-airmiles: #0066A4;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-mcb-bg);
+  color: var(--color-mcb-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tabular numerals utility */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

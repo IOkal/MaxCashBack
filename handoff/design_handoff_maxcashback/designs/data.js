@@ -1,0 +1,58 @@
+// Shared data for both design directions
+
+window.MCB_DATA = {
+  stats: {
+    stores: 2081,
+    portals: 6,
+    lastUpdate: "Apr 17, 2026 · 9:09 PM UTC",
+  },
+  portals: [
+    { id: "rakuten", name: "Rakuten.ca", short: "RK", color: "#BF0000" },
+    { id: "gcr", name: "Great Canadian Rebates", short: "GCR", color: "#006B3C" },
+    { id: "swagbucks", name: "Swagbucks", short: "SB", color: "#0A7AA6" },
+    { id: "aeroplan", name: "Aeroplan eStore", short: "AE", color: "#D3273E" },
+    { id: "topcashback", name: "TopCashback", short: "TCB", color: "#E8344C" },
+    { id: "drop", name: "Drop", short: "DR", color: "#6B4FBB" },
+  ],
+  trending: [
+    { name: "CyberGhost VPN", slug: "cyberghost-vpn", rate: 65.0, portal: "Great Canadian Rebates", trend: +12, cat: "Software" },
+    { name: "Canva", slug: "canva", rate: 50.0, portal: "Great Canadian Rebates", trend: +5, cat: "Software" },
+    { name: "Bluehost", slug: "bluehost", rate: 40.0, portal: "Great Canadian Rebates", trend: 0, cat: "Hosting" },
+    { name: "Keeper Security", slug: "keeper-security", rate: 40.0, portal: "Swagbucks", trend: +8, cat: "Software" },
+    { name: "Jobber", slug: "jobber", rate: 35.0, portal: "Great Canadian Rebates", trend: -2, cat: "Business" },
+    { name: "Hotspot Shield", slug: "hotspot-shield", rate: 32.5, portal: "Great Canadian Rebates", trend: +3, cat: "Software" },
+    { name: "HelloFresh", slug: "hellofresh", rate: 30.0, portal: "Aeroplan eStore", trend: +1, cat: "Food" },
+    { name: "Factor Canada", slug: "factor-canada", rate: 30.0, portal: "Rakuten.ca", trend: 0, cat: "Food" },
+    { name: "Chefs Plate", slug: "chefs-plate", rate: 30.0, portal: "Aeroplan eStore", trend: +4, cat: "Food" },
+    { name: "Skillshare", slug: "skillshare", rate: 30.0, portal: "Great Canadian Rebates", trend: 0, cat: "Learning" },
+    { name: "InVideo", slug: "invideo", rate: 30.0, portal: "Great Canadian Rebates", trend: -1, cat: "Software" },
+    { name: "NordPass", slug: "nordpass", rate: 30.0, portal: "Aeroplan eStore", trend: +2, cat: "Software" },
+  ],
+  popular: [
+    { name: "adidas Canada", slug: "adidas-canada", rate: "5 pts/$", rank: 1, cat: "Apparel" },
+    { name: "Best Buy Canada", slug: "best-buy-canada", rate: "3 pts/$", rank: 4, cat: "Electronics" },
+    { name: "Marriott Bonvoy", slug: "marriott-bonvoy", rate: "1.5%", rank: 3, cat: "Travel" },
+    { name: "Gymshark", slug: "gymshark", rate: "2%", rank: 6, cat: "Apparel" },
+    { name: "Lululemon", slug: "lululemon", rate: "2 pts/$", rank: 15, cat: "Apparel" },
+    { name: "1Password", slug: "1password", rate: "25%", rank: 12, cat: "Software" },
+    { name: "Canva", slug: "canva", rate: "50%", rank: 13, cat: "Software" },
+    { name: "HelloFresh", slug: "hellofresh", rate: "30%", rank: 26, cat: "Food" },
+  ],
+  categories: [
+    { name: "Apparel", count: 312, icon: "👕" },
+    { name: "Electronics", count: 148, icon: "🔌" },
+    { name: "Travel", count: 97, icon: "✈" },
+    { name: "Food & Grocery", count: 83, icon: "🥡" },
+    { name: "Software", count: 276, icon: "⌘" },
+    { name: "Beauty", count: 194, icon: "✦" },
+    { name: "Home", count: 221, icon: "◨" },
+    { name: "Learning", count: 64, icon: "◉" },
+  ],
+  movers: [
+    { name: "Lululemon", change: +1.5, from: 0.5, to: 2.0, portal: "Rakuten.ca" },
+    { name: "Best Buy", change: +1.0, from: 2, to: 3, portal: "Aeroplan", unit: "pts/$" },
+    { name: "Gymshark", change: -0.5, from: 2.5, to: 2.0, portal: "Rakuten.ca" },
+    { name: "Canva", change: +10, from: 40, to: 50, portal: "GCR" },
+    { name: "adidas", change: +2, from: 3, to: 5, portal: "Aeroplan", unit: "pts/$" },
+  ],
+};
