@@ -8,6 +8,7 @@ import {
   getHighestEarnRates,
   getSiteStatus,
   type CashbackRate,
+  type SiteStatus,
 } from '@/lib/db'
 
 function formatRate(rate: CashbackRate): string {
@@ -26,10 +27,17 @@ function formatStatusTimestamp(dateString: string | null): string {
   }).format(new Date(dateString))
 }
 
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const hours = Math.floor(diff / 3_600_000)
+  if (hours < 1) return 'just now'
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
 /* ─── Hero ───────────────────────────────────────────────── */
 
-async function Hero() {
-  const status = await getSiteStatus()
+function Hero({ status }: { status: SiteStatus }) {
   const storeCount = status.trackedStores || 0
   const portalCount = status.trackedPortals || 0
 
@@ -85,7 +93,7 @@ async function Hero() {
           {[
             { v: storeCount.toLocaleString(), l: 'Stores tracked' },
             { v: String(portalCount), l: 'Portals compared' },
-            { v: '65%', l: 'Highest live rate' },
+            { v: status.highestRate != null ? `${Math.round(status.highestRate)}%` : '—', l: 'Highest live rate' },
             { v: '24h', l: 'Update cadence' },
           ].map((s, i) => (
             <div
@@ -232,14 +240,14 @@ function BillboardAd() {
 
 /* ─── Portal Grid ────────────────────────────────────────── */
 
-function PortalGrid() {
+function PortalGrid({ latestUpdate }: { latestUpdate: string | null }) {
   const portals = [
-    { id: 'rakuten', name: 'Rakuten.ca', short: 'RK', color: '#BF0000' },
-    { id: 'gcr', name: 'Great Canadian Rebates', short: 'GCR', color: '#006B3C' },
-    { id: 'swagbucks', name: 'Swagbucks', short: 'SB', color: '#0A7AA6' },
-    { id: 'aeroplan', name: 'Aeroplan eStore', short: 'AE', color: '#D3273E' },
-    { id: 'topcashback', name: 'TopCashback', short: 'TCB', color: '#E8344C' },
-    { id: 'airmiles', name: 'Air Miles Shops', short: 'AM', color: '#0066A4' },
+    { id: 'rakuten', name: 'Rakuten.ca', short: 'RK', color: '#BF0000', url: 'https://www.rakuten.ca' },
+    { id: 'gcr', name: 'Great Canadian Rebates', short: 'GCR', color: '#006B3C', url: 'https://www.greatcanadianrebates.ca' },
+    { id: 'swagbucks', name: 'Swagbucks', short: 'SB', color: '#0A7AA6', url: 'https://www.swagbucks.com' },
+    { id: 'aeroplan', name: 'Aeroplan eStore', short: 'AE', color: '#D3273E', url: 'https://www.aircanada.com/ca/en/aco/home/aeroplan/estore.html' },
+    { id: 'topcashback', name: 'TopCashback', short: 'TCB', color: '#E8344C', url: 'https://www.topcashback.com' },
+    { id: 'airmiles', name: 'Air Miles Shops', short: 'AM', color: '#0066A4', url: 'https://www.airmilesshops.ca' },
   ]
 
   return (
@@ -257,9 +265,12 @@ function PortalGrid() {
         </div>
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           {portals.map(p => (
-            <div
+            <a
               key={p.id}
-              className="flex items-center gap-3.5 rounded-xl border border-mcb-line bg-mcb-bg px-5 py-4"
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3.5 rounded-xl border border-mcb-line bg-mcb-bg px-5 py-4 transition-colors hover:border-mcb-ink-mute"
             >
               <div
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[13px] font-bold text-white"
@@ -270,11 +281,11 @@ function PortalGrid() {
               <div className="min-w-0 flex-1">
                 <div className="text-[14px] font-medium text-mcb-ink">{p.name}</div>
                 <div className="tabular-nums text-[12px] text-mcb-ink-mute">
-                  Tracked · updated 2h ago
+                  Tracked · updated {latestUpdate ? timeAgo(latestUpdate) : 'recently'}
                 </div>
               </div>
               <span className="text-[12px] text-mcb-ink-soft">&rarr;</span>
-            </div>
+            </a>
           ))}
         </div>
       </div>
@@ -305,19 +316,12 @@ function BoardsSkeleton() {
 
 /* ─── Page ───────────────────────────────────────────────── */
 
-export default function HomePage() {
+async function HomeContent() {
+  const status = await getSiteStatus()
+
   return (
     <>
-      <Suspense fallback={
-        <section className="border-b border-mcb-line bg-mcb-surface px-5 pb-11 pt-16 md:px-10">
-          <div className="mx-auto max-w-[1200px] animate-pulse">
-            <div className="mb-5 h-3 w-48 rounded bg-mcb-bg" />
-            <div className="h-16 max-w-[700px] rounded bg-mcb-bg" />
-          </div>
-        </section>
-      }>
-        <Hero />
-      </Suspense>
+      <Hero status={status} />
 
       <LeaderboardAd />
 
@@ -327,7 +331,22 @@ export default function HomePage() {
 
       <BillboardAd />
 
-      <PortalGrid />
+      <PortalGrid latestUpdate={status.latestUpdate} />
     </>
+  )
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={
+      <section className="border-b border-mcb-line bg-mcb-surface px-5 pb-11 pt-16 md:px-10">
+        <div className="mx-auto max-w-[1200px] animate-pulse">
+          <div className="mb-5 h-3 w-48 rounded bg-mcb-bg" />
+          <div className="h-16 max-w-[700px] rounded bg-mcb-bg" />
+        </div>
+      </section>
+    }>
+      <HomeContent />
+    </Suspense>
   )
 }

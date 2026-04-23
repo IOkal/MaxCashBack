@@ -142,9 +142,10 @@ export default function RootLayout({
               <div>
                 <div className="mb-3 text-[11px] uppercase tracking-wider opacity-50">Product</div>
                 <div className="space-y-2">
-                  {['Browse stores', 'Top rates', 'Popular', 'Categories'].map(item => (
-                    <div key={item} className="text-[13px] opacity-85">{item}</div>
-                  ))}
+                  <Link href="/" className="block text-[13px] opacity-85 hover:opacity-100">Browse stores</Link>
+                  <Link href="/#top-rates" className="block text-[13px] opacity-85 hover:opacity-100">Top rates</Link>
+                  <Link href="/#popular" className="block text-[13px] opacity-85 hover:opacity-100">Popular</Link>
+                  <Link href="/#portals" className="block text-[13px] opacity-85 hover:opacity-100">Portals</Link>
                 </div>
               </div>
 
@@ -152,9 +153,10 @@ export default function RootLayout({
               <div>
                 <div className="mb-3 text-[11px] uppercase tracking-wider opacity-50">Portals</div>
                 <div className="space-y-2">
-                  {['Rakuten.ca', 'GCR', 'Swagbucks', 'Aeroplan'].map(item => (
-                    <div key={item} className="text-[13px] opacity-85">{item}</div>
-                  ))}
+                  <a href="https://www.rakuten.ca" target="_blank" rel="noopener noreferrer" className="block text-[13px] opacity-85 hover:opacity-100">Rakuten.ca</a>
+                  <a href="https://www.greatcanadianrebates.ca" target="_blank" rel="noopener noreferrer" className="block text-[13px] opacity-85 hover:opacity-100">Great Canadian Rebates</a>
+                  <a href="https://www.swagbucks.com" target="_blank" rel="noopener noreferrer" className="block text-[13px] opacity-85 hover:opacity-100">Swagbucks</a>
+                  <a href="https://www.aircanada.com/ca/en/aco/home/aeroplan/estore.html" target="_blank" rel="noopener noreferrer" className="block text-[13px] opacity-85 hover:opacity-100">Aeroplan eStore</a>
                 </div>
               </div>
 
