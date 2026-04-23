@@ -282,99 +282,6 @@ function PortalGrid() {
   )
 }
 
-/* ─── Categories ─────────────────────────────────────────── */
-
-function Categories() {
-  const categories = [
-    { name: 'Apparel', count: 312 },
-    { name: 'Electronics', count: 148 },
-    { name: 'Travel', count: 97 },
-    { name: 'Food & Grocery', count: 83 },
-    { name: 'Software', count: 276 },
-    { name: 'Beauty', count: 194 },
-    { name: 'Home', count: 221 },
-    { name: 'Learning', count: 64 },
-  ]
-
-  return (
-    <section id="categories" className="border-b border-mcb-line bg-mcb-bg px-5 py-14 md:px-10">
-      <div className="mx-auto max-w-[1200px]">
-        <h2 className="mb-6 font-serif text-[30px] text-mcb-ink" style={{ letterSpacing: -0.6 }}>
-          Browse by category
-        </h2>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          {categories.map(c => (
-            <div
-              key={c.name}
-              className="flex flex-col gap-1 rounded-xl border border-mcb-line bg-mcb-surface px-4 py-4"
-            >
-              <div className="text-[14px] font-medium text-mcb-ink">{c.name}</div>
-              <div className="tabular-nums text-[12px] text-mcb-ink-mute">{c.count} stores</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ─── Extension CTA ──────────────────────────────────────── */
-
-function ExtensionCTA() {
-  return (
-    <section className="border-b border-mcb-line bg-mcb-surface px-5 py-16 md:px-10">
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
-        <div>
-          <div className="mb-3 text-[11px] uppercase tracking-wider text-mcb-accent-ink">
-            Browser extension
-          </div>
-          <h2 className="font-serif text-mcb-ink" style={{ fontSize: 'clamp(30px, 4vw, 42px)', letterSpacing: -1, lineHeight: 1.05 }}>
-            Never miss a rate.{' '}
-            <em className="text-mcb-accent-ink">Ever.</em>
-          </h2>
-          <p className="mt-4 max-w-[480px] text-[15px] leading-relaxed text-mcb-ink-soft">
-            A quiet ribbon appears at checkout showing the best portal for the store you&apos;re on. One click, activated.
-          </p>
-          <div className="mt-5 flex gap-2.5">
-            <span className="rounded-[10px] bg-mcb-ink px-5 py-3 text-[14px] font-medium text-mcb-bg">
-              Add to Chrome
-            </span>
-            <span className="rounded-[10px] border border-mcb-line bg-mcb-bg px-5 py-3 text-[14px] font-medium text-mcb-ink">
-              Firefox · Safari
-            </span>
-          </div>
-        </div>
-
-        {/* Browser mock */}
-        <div className="rounded-2xl border border-mcb-line bg-mcb-bg p-5">
-          <div className="mb-3.5 flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full" style={{ background: '#ED6A5E' }} />
-            <div className="h-2.5 w-2.5 rounded-full" style={{ background: '#F5BE4F' }} />
-            <div className="h-2.5 w-2.5 rounded-full" style={{ background: '#62C555' }} />
-            <div className="flex-1 text-center text-[11px] text-mcb-ink-mute">lululemon.com</div>
-          </div>
-          <div className="flex items-center gap-3 rounded-[10px] border border-mcb-accent bg-mcb-accent-soft p-3.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-mcb-accent font-serif text-lg italic text-mcb-surface">
-              m
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-medium text-mcb-ink">
-                Best rate: <b>2 pts/$</b> via Aeroplan eStore
-              </div>
-              <div className="mt-0.5 text-[11px] text-mcb-ink-soft">
-                + 0.5% Rakuten · stackable with TD Cash Back Visa
-              </div>
-            </div>
-            <span className="rounded-[7px] bg-mcb-accent px-3 py-1.5 text-[12px] font-medium text-mcb-surface">
-              Activate
-            </span>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
-}
-
 /* ─── Skeletons ──────────────────────────────────────────── */
 
 function SearchSkeleton() {
@@ -421,8 +328,6 @@ export default function HomePage() {
       <BillboardAd />
 
       <PortalGrid />
-      <Categories />
-      <ExtensionCTA />
     </>
   )
 }

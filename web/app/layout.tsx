@@ -62,7 +62,6 @@ function NavLinks() {
       <Link href="/" className="font-medium text-mcb-ink">Browse</Link>
       <Link href="/#top-rates" className="hover:text-mcb-ink">Top rates</Link>
       <Link href="/#popular" className="hover:text-mcb-ink">Popular</Link>
-      <Link href="/#categories" className="hover:text-mcb-ink">Categories</Link>
       <Link href="/#portals" className="hover:text-mcb-ink">Portals</Link>
     </nav>
   )
