@@ -45,6 +45,15 @@ function formatRate(rate: CashbackRate): string {
   return `${prefix}$${rate.rate_value}`
 }
 
+const RAKUTEN_REFERRAL = 'referrerid=5GYj2b3FkAQ%3D&src=Link'
+
+function affiliateUrl(url: string): string {
+  if (url.includes('rakuten.ca')) {
+    return url + (url.includes('?') ? '&' : '?') + RAKUTEN_REFERRAL
+  }
+  return url
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const hours = Math.floor(diff / 3_600_000)
@@ -170,7 +179,7 @@ function ComparisonTable({ rates }: { rates: CashbackRate[] }) {
                   <div className="text-right max-md:col-span-2">
                     {rate.source_url && (
                       <a
-                        href={rate.source_url}
+                        href={affiliateUrl(rate.source_url)}
                         target="_blank"
                         rel="noopener noreferrer sponsored"
                         className={`inline-flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[12px] font-medium ${
