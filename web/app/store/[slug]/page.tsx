@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import AdSlot from '@/components/AdSlot'
 import StoreLogo from '@/components/StoreLogo'
+import WaitlistSignup from '@/components/WaitlistSignup'
 import PortalBadge, { PortalDot, getPortalColor } from '@/components/PortalBadge'
 import { getRetailerBySlug, getStoreRateHistory, getStoreRates } from '@/lib/db'
 import { getSupabaseAdmin } from '@/lib/supabase-admin'
@@ -226,11 +227,9 @@ function ComparisonTable({ rates }: { rates: CashbackRate[] }) {
               Stack with your card.
             </h3>
             <p className="mt-2 text-[13px] leading-relaxed text-mcb-ink-soft">
-              Add 2–4% more on top of portal cashback. We&apos;ll suggest the best credit card for each store.
+              We&apos;re building a way to find the best cashback stacking deals — pairing the right credit card with each store&apos;s portal cashback.
             </p>
-            <div className="mt-3 rounded-[7px] border border-mcb-line bg-mcb-bg px-3 py-2 text-center text-[12px] font-medium text-mcb-ink">
-              Join the waitlist &rarr;
-            </div>
+            <WaitlistSignup feature="card_stacking" />
           </div>
         </div>
       </div>
