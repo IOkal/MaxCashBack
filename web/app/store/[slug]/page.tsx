@@ -89,7 +89,98 @@ function Breadcrumb({ category, name }: { category: string | null; name: string 
 
 /* ─── Comparison Table───────────────────────────────────── */
 
+function RateRow({ rate, isTop, badgeLabel }: { rate: CashbackRate; isTop: boolean; badgeLabel: string }) {
+  return (
+    <div
+      className={`grid items-center gap-3 border-b border-mcb-line-soft px-4 py-4 last:border-b-0 max-md:grid-cols-2 md:grid-cols-[1.4fr_1fr_0.8fr_100px_80px_90px] ${
+        isTop ? 'bg-mcb-accent-soft' : 'bg-mcb-surface'
+      }`}
+      style={isTop ? { borderLeft: '3px solid var(--color-mcb-accent)' } : undefined}
+    >
+      {/* Portal */}
+      <div className="flex items-center gap-3">
+        <PortalBadge name={rate.source_name} />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[14px] font-medium text-mcb-ink">
+            {rate.source_name}
+            {isTop && (
+              <span className="rounded border border-mcb-accent bg-mcb-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-mcb-accent-ink">
+                {badgeLabel}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Offer */}
+      <div className="tabular-nums font-serif text-[18px] text-mcb-ink" style={{ letterSpacing: -0.3 }}>
+        {formatRate(rate)}
+      </div>
+
+      {/* Type */}
+      <div className="flex items-center gap-1.5 text-[12px] text-mcb-ink-soft max-md:hidden">
+        <span
+          className="inline-block h-[5px] w-[5px] rounded-full"
+          style={{
+            background: rate.rate_type === 'points_per_dollar'
+              ? 'oklch(0.6 0.12 260)'
+              : 'var(--color-mcb-pos)',
+          }}
+        />
+        {rate.rate_type === 'points_per_dollar' ? 'Points' : 'Cashback'}
+      </div>
+
+      {/* Effective */}
+      <div className={`tabular-nums text-right font-serif text-[22px] text-mcb-ink max-md:hidden ${isTop ? 'font-semibold text-mcb-accent-ink' : ''}`}
+        style={{ letterSpacing: -0.3 }}
+      >
+        {rate.rate_type === 'points_per_dollar' ? (
+          <span className="text-[13px] font-sans font-normal text-mcb-ink-soft">
+            {rate.effective_cash_percentage != null
+              ? <>&asymp; {rate.effective_cash_percentage.toFixed(2)}%</>
+              : '—'
+            }
+          </span>
+        ) : (
+          rate.effective_cash_percentage != null
+            ? <>{rate.effective_cash_percentage.toFixed(2)}<span className="text-[12px] text-mcb-ink-mute">%</span></>
+            : '—'
+        )}
+      </div>
+
+      {/* Updated */}
+      <div className="tabular-nums text-right text-[12px] text-mcb-ink-mute max-md:hidden">
+        {timeAgo(rate.last_seen_at)}
+      </div>
+
+      {/* Shop button */}
+      <div className="text-right max-md:col-span-2">
+        {rate.source_url && (
+          <a
+            href={affiliateUrl(rate.source_url)}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className={`inline-flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[12px] font-medium ${
+              isTop
+                ? 'bg-mcb-ink text-mcb-bg'
+                : 'border border-mcb-line bg-mcb-surface text-mcb-ink'
+            }`}
+          >
+            Shop
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M7 17 17 7M7 7h10v10" />
+            </svg>
+          </a>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ComparisonTable({ rates }: { rates: CashbackRate[] }) {
+  const cashRates = rates.filter(r => r.rate_type !== 'points_per_dollar')
+  const pointsRates = rates.filter(r => r.rate_type === 'points_per_dollar')
+
   return (
     <div className="px-5 pt-10 md:px-10">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-8 lg:grid-cols-[1fr_300px]">
@@ -98,108 +189,62 @@ function ComparisonTable({ rates }: { rates: CashbackRate[] }) {
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
             <div>
               <h2 className="font-serif text-[28px] text-mcb-ink" style={{ letterSpacing: -0.6 }}>
-                All portals
+                Cash back
               </h2>
               <p className="mt-1 text-[13px] text-mcb-ink-soft">
-                Sorted by effective cash rate. Verify before purchase.
+                Sorted by cashback rate. Verify before purchase.
               </p>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-mcb-line bg-mcb-surface">
-            {/* Header */}
-            <div className="grid grid-cols-[1.4fr_1fr_0.8fr_100px_80px_90px] border-b border-mcb-line bg-mcb-bg px-4 py-3.5 text-[10px] uppercase tracking-wider text-mcb-ink-mute max-md:hidden">
-              <div>Portal</div>
-              <div>Offer</div>
-              <div>Type</div>
-              <div className="text-right">Effective</div>
-              <div className="text-right">Updated</div>
-              <div />
+          {cashRates.length > 0 ? (
+            <div className="overflow-hidden rounded-xl border border-mcb-line bg-mcb-surface">
+              {/* Header */}
+              <div className="grid grid-cols-[1.4fr_1fr_0.8fr_100px_80px_90px] border-b border-mcb-line bg-mcb-bg px-4 py-3.5 text-[10px] uppercase tracking-wider text-mcb-ink-mute max-md:hidden">
+                <div>Portal</div>
+                <div>Offer</div>
+                <div>Type</div>
+                <div className="text-right">Rate</div>
+                <div className="text-right">Updated</div>
+                <div />
+              </div>
+
+              {cashRates.map((rate, i) => (
+                <RateRow key={rate.source_slug} rate={rate} isTop={i === 0} badgeLabel="Best" />
+              ))}
             </div>
+          ) : (
+            <div className="rounded-xl border border-mcb-line bg-mcb-surface px-4 py-6 text-[13px] text-mcb-ink-soft">
+              No cash-back portals track this store right now.
+            </div>
+          )}
 
-            {/* Rows */}
-            {rates.map((rate, i) => {
-              const isBest = i === 0
-              return (
-                <div
-                  key={rate.source_slug}
-                  className={`grid items-center gap-3 border-b border-mcb-line-soft px-4 py-4 last:border-b-0 max-md:grid-cols-2 md:grid-cols-[1.4fr_1fr_0.8fr_100px_80px_90px] ${
-                    isBest ? 'bg-mcb-accent-soft' : 'bg-mcb-surface'
-                  }`}
-                  style={isBest ? { borderLeft: '3px solid var(--color-mcb-accent)' } : undefined}
-                >
-                  {/* Portal */}
-                  <div className="flex items-center gap-3">
-                    <PortalBadge name={rate.source_name} />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-[14px] font-medium text-mcb-ink">
-                        {rate.source_name}
-                        {isBest && (
-                          <span className="rounded border border-mcb-accent bg-mcb-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-mcb-accent-ink">
-                            Best
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Offer */}
-                  <div className="tabular-nums font-serif text-[18px] text-mcb-ink" style={{ letterSpacing: -0.3 }}>
-                    {formatRate(rate)}
-                  </div>
-
-                  {/* Type */}
-                  <div className="flex items-center gap-1.5 text-[12px] text-mcb-ink-soft max-md:hidden">
-                    <span
-                      className="inline-block h-[5px] w-[5px] rounded-full"
-                      style={{
-                        background: rate.rate_type === 'points_per_dollar'
-                          ? 'oklch(0.6 0.12 260)'
-                          : 'var(--color-mcb-pos)',
-                      }}
-                    />
-                    {rate.rate_type === 'points_per_dollar' ? 'Points' : 'Cashback'}
-                  </div>
-
-                  {/* Effective */}
-                  <div className={`tabular-nums text-right font-serif text-[22px] text-mcb-ink max-md:hidden ${isBest ? 'font-semibold text-mcb-accent-ink' : ''}`}
-                    style={{ letterSpacing: -0.3 }}
-                  >
-                    {rate.effective_cash_percentage != null
-                      ? <>{rate.effective_cash_percentage.toFixed(2)}<span className="text-[12px] text-mcb-ink-mute">%</span></>
-                      : '—'
-                    }
-                  </div>
-
-                  {/* Updated */}
-                  <div className="tabular-nums text-right text-[12px] text-mcb-ink-mute max-md:hidden">
-                    {timeAgo(rate.last_seen_at)}
-                  </div>
-
-                  {/* Shop button */}
-                  <div className="text-right max-md:col-span-2">
-                    {rate.source_url && (
-                      <a
-                        href={affiliateUrl(rate.source_url)}
-                        target="_blank"
-                        rel="noopener noreferrer sponsored"
-                        className={`inline-flex items-center gap-1.5 rounded-[7px] px-3 py-1.5 text-[12px] font-medium ${
-                          isBest
-                            ? 'bg-mcb-ink text-mcb-bg'
-                            : 'border border-mcb-line bg-mcb-surface text-mcb-ink'
-                        }`}
-                      >
-                        Shop
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                          <path d="M7 17 17 7M7 7h10v10" />
-                        </svg>
-                      </a>
-                    )}
-                  </div>
+          {pointsRates.length > 0 && (
+            <div className="mt-8">
+              <div className="mb-4">
+                <h2 className="font-serif text-[22px] text-mcb-ink" style={{ letterSpacing: -0.5 }}>
+                  Points programs
+                </h2>
+                <p className="mt-1 text-[13px] text-mcb-ink-soft">
+                  Earn points instead of cash back. The % shown is an estimated cash value at each program&apos;s published redemption rate — not a guaranteed cashback rate.
+                </p>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-mcb-line bg-mcb-surface">
+                <div className="grid grid-cols-[1.4fr_1fr_0.8fr_100px_80px_90px] border-b border-mcb-line bg-mcb-bg px-4 py-3.5 text-[10px] uppercase tracking-wider text-mcb-ink-mute max-md:hidden">
+                  <div>Portal</div>
+                  <div>Offer</div>
+                  <div>Type</div>
+                  <div className="text-right">Est. value</div>
+                  <div className="text-right">Updated</div>
+                  <div />
                 </div>
-              )
-            })}
-          </div>
+
+                {pointsRates.map((rate, i) => (
+                  <RateRow key={rate.source_slug} rate={rate} isTop={i === 0} badgeLabel="Top" />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Legend */}
           <div className="mt-2.5 flex gap-3.5 text-[11px] text-mcb-ink-mute">
