@@ -13,7 +13,7 @@ Users search for a retailer (e.g. "Amazon") and see a comparison table of cashba
 3. **Aeroplan eStore** — Points per dollar (Aeroplan points). ~200 stores. JS-rendered.
 4. **TopCashback Canada** — Cash back (percentage or fixed amount). ~220 stores in the Canada category. Traditional HTML, paginated category pages.
 
-5. **Swagbucks** — Cash back (percentage). ~1,500 stores. Server-rendered HTML with embedded JSON, paginated A-Z directory.
+5. **Swagbucks** — Cash back (percentage). ~20 stores anonymously (see Scraping Notes — the site's 2026-06 redesign login-gates the full ~1,500-store directory). Client-side JSON API fetched via Playwright.
 6. **Air Miles Shops** — Points per dollar (Air Miles, ~10.5¢ each). JS-rendered React app at airmilesshops.ca.
 
 Future additions: credit card shopping portals (RBC, TD, etc.)
@@ -121,10 +121,17 @@ Four main tables:
 - Use the category listing rate for now because the detail page can expose multiple sub-rates
 
 ### Swagbucks
-- URL: https://www.swagbucks.com/shop/all-stores-coupons?type=all&letter={A-Z,1}
-- Server-rendered HTML with embedded `initialCardLoad` JavaScript object
-- A-Z paginated directory (27 pages: letters A-Z + "1" for numbers)
-- Each page embeds the first ~20 stores as JSON; total catalog is ~1,500 stores
+- URL: https://www.swagbucks.com/shop/all-stores-coupons?type=all
+- As of a 2026-06 site redesign (Next.js rebuild), the old `window.initialCardLoad`
+  global and A-Z letter directory are gone — letter links now redirect signed-out
+  visitors to `/p/login`. Store data instead comes from a POST to
+  `/?cmd=mp-sh-stream-data` (`_ajax=1&streamType=all-coupons&sort=100&view=cards`),
+  fetched via Playwright from an already-loaded page (same-origin fetch, needs
+  the page's session).
+- Signed out, this endpoint only returns a fixed popularity-ranked list of ~20
+  stores — there is currently no way to page through it anonymously. Coverage
+  has dropped from ~1,500 stores to ~20 until/unless we scrape behind a logged-in
+  session.
 - Key fields: `header` (name), `cashBackPercent` (rate), `upTo` (bool), `detailsLink` (URL)
 - Rates are percentage-based ("X% Cash Back")
 

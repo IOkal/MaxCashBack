@@ -42,8 +42,10 @@ class BaseScraper(abc.ABC):
         self.logger.info(f"Scraped {len(rates)} rates from {self.SOURCE_NAME}")
 
         if not rates:
-            self.logger.warning("No rates scraped — skipping DB update")
-            return
+            raise RuntimeError(
+                f"{self.SOURCE_NAME} scraped 0 rates — refusing to skip silently "
+                "so the workflow step fails and the failure alert fires"
+            )
 
         from db import get_connection, get_source_id, find_or_create_retailer, upsert_cashback_rate
 

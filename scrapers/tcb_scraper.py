@@ -1,28 +1,28 @@
 """
 TopCashback Canada scraper.
 
-TCB's Canada category pages are server-rendered and paginated with `?page=N`.
-We scrape the category listing rate rather than the retailer detail page because
-the current data model stores one current rate per retailer/source.
+TCB's Canada category pages are paginated with `?page=N&orderBy=popularity`.
+As of the site's latest redesign, plain `requests` calls get a 403 from their
+bot protection, so we fetch with Playwright (a real browser) instead. We scrape
+the category listing rate rather than the retailer detail page because the
+current data model stores one current rate per retailer/source.
 """
 
-import re
 from urllib.parse import urljoin
+import re
 
-import requests
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 from base_scraper import BaseScraper, ScrapedRate
 
 TCB_CANADA_URL = "https://www.topcashback.com/category/canada-retailers/"
 TCB_BASE_URL = "https://www.topcashback.com"
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/123.0.0.0 Safari/537.36"
-    )
-}
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/123.0.0.0 Safari/537.36"
+)
+MAX_PAGES = 30
 
 
 def parse_tcb_rate(text: str) -> tuple[float, bool, str]:
@@ -56,64 +56,65 @@ class TCBScraper(BaseScraper):
     def scrape(self) -> list[ScrapedRate]:
         rates: list[ScrapedRate] = []
         seen_keys: set[str] = set()
-        next_url: str | None = TCB_CANADA_URL
-        visited_urls: set[str] = set()
-        page_number = 1
 
-        while next_url and next_url not in visited_urls:
-            visited_urls.add(next_url)
-            self.logger.info(f"Fetching TCB Canada page {page_number}: {next_url}")
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(user_agent=USER_AGENT)
+            page = context.new_page()
 
-            try:
-                response = requests.get(next_url, timeout=30, headers=HEADERS)
-                response.raise_for_status()
-            except requests.RequestException as e:
-                self.logger.error(f"Failed to fetch {next_url}: {e}")
-                break
+            for page_number in range(1, MAX_PAGES + 1):
+                url = f"{TCB_CANADA_URL}?page={page_number}&orderBy=popularity"
+                self.logger.info(f"Fetching TCB Canada page {page_number}: {url}")
 
-            soup = BeautifulSoup(response.text, "html.parser")
-            cards = soup.select("a.category-panel")
-            self.logger.info(f"Found {len(cards)} TCB retailer cards on page {page_number}")
-
-            if not cards:
-                break
-
-            for card in cards:
                 try:
-                    name_el = card.select_one(".search-merchant-name")
-                    cashback_el = card.select_one(".category-cashback-rate")
-
-                    if not name_el or not cashback_el:
-                        continue
-
-                    store_name = " ".join(name_el.get_text(" ", strip=True).split())
-                    rate_text = " ".join(cashback_el.get_text(" ", strip=True).split())
-
-                    href = (card.get("href") or "").strip()
-                    source_url = urljoin(TCB_BASE_URL, href) if href else None
-                    dedupe_key = source_url or store_name.lower()
-                    if dedupe_key in seen_keys:
-                        continue
-                    seen_keys.add(dedupe_key)
-
-                    rate_value, is_up_to, rate_type = parse_tcb_rate(rate_text)
-                    rates.append(
-                        ScrapedRate(
-                            store_name=store_name,
-                            rate_value=rate_value,
-                            rate_type=rate_type,
-                            rate_display=rate_text,
-                            is_up_to=is_up_to,
-                            source_url=source_url,
-                        )
-                    )
+                    page.goto(url, wait_until="networkidle", timeout=30000)
                 except Exception as e:
-                    self.logger.error(f"Error parsing TCB retailer card: {e}")
+                    self.logger.error(f"Failed to load {url}: {e}")
+                    break
 
-            next_link = soup.select_one('link[rel="next"]')
-            next_href = (next_link.get("href") or "").strip() if next_link else ""
-            next_url = urljoin(TCB_BASE_URL, next_href) if next_href else None
-            page_number += 1
+                cards = page.evaluate(
+                    """
+                    () => Array.from(document.querySelectorAll('a.cat-result')).map(a => ({
+                        name: (a.querySelector('.cat-result-info__name')?.textContent || '').trim(),
+                        rate: (a.querySelector('.cat-result-info__rate')?.textContent || '').trim(),
+                        href: a.getAttribute('href') || '',
+                    }))
+                    """
+                )
+                self.logger.info(f"Found {len(cards)} TCB retailer cards on page {page_number}")
+
+                if not cards:
+                    break
+
+                for card in cards:
+                    try:
+                        store_name = " ".join(card["name"].split())
+                        rate_text = " ".join(card["rate"].split())
+                        if not store_name or not rate_text:
+                            continue
+
+                        href = card["href"].strip()
+                        source_url = urljoin(TCB_BASE_URL, href) if href else None
+                        dedupe_key = source_url or store_name.lower()
+                        if dedupe_key in seen_keys:
+                            continue
+                        seen_keys.add(dedupe_key)
+
+                        rate_value, is_up_to, rate_type = parse_tcb_rate(rate_text)
+                        rates.append(
+                            ScrapedRate(
+                                store_name=store_name,
+                                rate_value=rate_value,
+                                rate_type=rate_type,
+                                rate_display=rate_text,
+                                is_up_to=is_up_to,
+                                source_url=source_url,
+                            )
+                        )
+                    except Exception as e:
+                        self.logger.error(f"Error parsing TCB retailer card: {e}")
+
+            browser.close()
 
         return rates
 

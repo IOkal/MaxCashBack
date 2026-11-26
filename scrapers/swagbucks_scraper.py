@@ -1,22 +1,26 @@
 """
 Swagbucks scraper.
 
-Swagbucks shows cashback as a percentage. The all-stores directory is split by
-letter (A-Z + "1" for numbers). Each letter page embeds an `initialCardLoad`
-JavaScript object containing store data. We use Playwright to evaluate the JS
-directly (avoiding brittle JSON conversion) and iterate through all 27 pages.
+Swagbucks shows cashback as a percentage. The site previously embedded a full
+alphabetical store directory via a `window.initialCardLoad` global on 27
+letter-indexed pages; that global no longer exists after Swagbucks' frontend
+redesign (a Next.js rebuild, data-revision ~2026-06-16).
 
-Note: each letter page returns the first ~20 stores from that letter's total.
-This still covers 500+ stores across all major retailers.
+Store data is now loaded client-side via `POST /?cmd=mp-sh-stream-data`, but
+for signed-out visitors it only returns a fixed popularity-ranked list (~20
+stores) — the per-letter directory now requires login (the letter links
+redirect to /p/login). Until we're willing to scrape behind an authenticated
+session, this is the practical ceiling for anonymous scraping: coverage has
+dropped from ~1,500 stores to ~20 of the most popular ones.
 """
 
 from playwright.sync_api import sync_playwright
 
 from base_scraper import BaseScraper, ScrapedRate
 
-LETTERS = ["1"] + list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-URL_TEMPLATE = "https://www.swagbucks.com/shop/all-stores-coupons?type=all&letter={}"
+ALL_STORES_URL = "https://www.swagbucks.com/shop/all-stores-coupons?type=all"
 SWAGBUCKS_BASE = "https://www.swagbucks.com"
+STREAM_DATA_BODY = "_ajax=1&streamType=all-coupons&sort=100&view=cards"
 
 
 class SwagbucksScraper(BaseScraper):
@@ -26,8 +30,6 @@ class SwagbucksScraper(BaseScraper):
     def scrape(self) -> list[ScrapedRate]:
         rates: list[ScrapedRate] = []
         seen_names: set[str] = set()
-        total_available = 0
-        total_fetched = 0
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -40,123 +42,106 @@ class SwagbucksScraper(BaseScraper):
             )
             page = context.new_page()
 
-            for letter in LETTERS:
-                url = URL_TEMPLATE.format(letter)
-                self.logger.info(f"Fetching Swagbucks letter={letter}")
+            try:
+                page.goto(ALL_STORES_URL, wait_until="networkidle", timeout=30000)
+            except Exception as e:
+                self.logger.error(f"Failed to load {ALL_STORES_URL}: {e}")
+                browser.close()
+                return rates
 
-                try:
-                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                except Exception as e:
-                    self.logger.error(f"Failed to load letter {letter}: {e}")
-                    continue
-
-                # Read the embedded initialCardLoad JS variable directly
-                data = page.evaluate(
-                    """
-                    () => {
-                        if (typeof initialCardLoad === 'undefined') return null;
-                        return {
-                            cards: (initialCardLoad.cards || []).map(c => ({
-                                header: c.header || '',
-                                cashBackPercent: c.cashBackPercent || 0,
-                                earn: c.earn || 0,
-                                upTo: !!c.upTo,
-                                perDollar: !!c.perDollar,
-                                sbCashValue: c.sbCashValueFormatted || '',
-                                detailsLink: c.detailsLink || '',
-                                merchantId: c.merchantId || 0,
-                            })),
-                            total: initialCardLoad.totalCount || 0,
-                        };
-                    }
-                    """
-                )
-
-                if not data:
-                    self.logger.warning(f"No initialCardLoad for letter {letter}")
-                    continue
-
-                cards = data.get("cards", [])
-                letter_total = data.get("total", len(cards))
-                total_available += letter_total
-                total_fetched += len(cards)
-
-                self.logger.info(
-                    f"Letter {letter}: {len(cards)}/{letter_total} stores"
-                )
-
-                for card in cards:
-                    try:
-                        name = (card.get("header") or "").strip()
-                        if not name:
-                            continue
-
-                        dedupe_key = name.lower()
-                        if dedupe_key in seen_names:
-                            continue
-                        seen_names.add(dedupe_key)
-
-                        cashback_pct = float(card.get("cashBackPercent", 0) or 0)
-                        earn = float(card.get("earn", 0) or 0)
-                        is_up_to = bool(card.get("upTo", False))
-                        per_dollar = bool(card.get("perDollar", False))
-                        sb_cash_value = card.get("sbCashValue", "")
-                        details_link = card.get("detailsLink", "")
-
-                        # Determine if this is a percentage rate or a flat SB reward.
-                        # Flat rewards have very high cashBackPercent values (100+)
-                        # and sbCashValueFormatted > 1.00 (meaning > $1 per dollar,
-                        # which is impossible as a percentage).
-                        is_flat = False
-                        try:
-                            cash_val = float(sb_cash_value) if sb_cash_value else 0
-                            is_flat = cash_val > 1.0
-                        except ValueError:
-                            is_flat = cashback_pct > 100
-
-                        if is_flat:
-                            # Flat SB reward (e.g. "10,000 SB" = $100 one-time)
-                            # Convert SB to dollars: 100 SB = $1
-                            dollar_value = earn / 100.0
-                            rate_type = "fixed"
-                            prefix = "Up to " if is_up_to else ""
-                            rate_display = f"{prefix}${dollar_value:.2f} Cash Back"
-                            rate_value = dollar_value
-                        else:
-                            rate_type = "percentage"
-                            rate_value = cashback_pct
-                            prefix = "Up to " if is_up_to else ""
-                            if cashback_pct == int(cashback_pct):
-                                rate_display = f"{prefix}{int(cashback_pct)}% Cash Back"
-                            else:
-                                rate_display = f"{prefix}{cashback_pct}% Cash Back"
-
-                        source_url = (
-                            f"{SWAGBUCKS_BASE}{details_link}"
-                            if details_link
-                            else None
-                        )
-
-                        rates.append(
-                            ScrapedRate(
-                                store_name=name,
-                                rate_value=rate_value,
-                                rate_type=rate_type,
-                                rate_display=rate_display,
-                                is_up_to=is_up_to,
-                                source_url=source_url,
-                            )
-                        )
-                    except Exception as e:
-                        self.logger.error(
-                            f"Error parsing card {card.get('header', '?')}: {e}"
-                        )
+            data = page.evaluate(
+                """
+                async (body) => {
+                    const resp = await fetch('/?cmd=mp-sh-stream-data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body,
+                    });
+                    if (!resp.ok) return null;
+                    return await resp.json();
+                }
+                """,
+                STREAM_DATA_BODY,
+            )
 
             browser.close()
 
-        self.logger.info(
-            f"Fetched {total_fetched}/{total_available} stores across all letters"
-        )
+        if not data or not data.get("success"):
+            self.logger.warning("No data returned from Swagbucks stream-data endpoint")
+            return rates
+
+        cards = data.get("cards", [])
+        self.logger.info(f"Fetched {len(cards)} stores from Swagbucks all-stores stream")
+
+        for card in cards:
+            try:
+                name = (card.get("header") or "").strip()
+                if not name:
+                    continue
+
+                dedupe_key = name.lower()
+                if dedupe_key in seen_names:
+                    continue
+                seen_names.add(dedupe_key)
+
+                cashback_pct = float(card.get("cashBackPercent", 0) or 0)
+                earn = float(card.get("earn", 0) or 0)
+                is_up_to = bool(card.get("upTo", False))
+                sb_cash_value = card.get("sbCashValueFormatted", "")
+                details_link = card.get("detailsLink", "")
+
+                # Determine if this is a percentage rate or a flat SB reward.
+                # Flat rewards have very high cashBackPercent values (100+)
+                # and sbCashValueFormatted > 1.00 (meaning > $1 per dollar,
+                # which is impossible as a percentage).
+                is_flat = False
+                try:
+                    cash_val = float(sb_cash_value) if sb_cash_value else 0
+                    is_flat = cash_val > 1.0
+                except ValueError:
+                    is_flat = cashback_pct > 100
+
+                if is_flat:
+                    # Flat SB reward (e.g. "10,000 SB" = $100 one-time)
+                    # Convert SB to dollars: 100 SB = $1
+                    dollar_value = earn / 100.0
+                    rate_type = "fixed"
+                    prefix = "Up to " if is_up_to else ""
+                    rate_display = f"{prefix}${dollar_value:.2f} Cash Back"
+                    rate_value = dollar_value
+                else:
+                    rate_type = "percentage"
+                    rate_value = cashback_pct
+                    prefix = "Up to " if is_up_to else ""
+                    if cashback_pct == int(cashback_pct):
+                        rate_display = f"{prefix}{int(cashback_pct)}% Cash Back"
+                    else:
+                        rate_display = f"{prefix}{cashback_pct}% Cash Back"
+
+                source_url = (
+                    f"{SWAGBUCKS_BASE}{details_link}"
+                    if details_link
+                    else None
+                )
+
+                rates.append(
+                    ScrapedRate(
+                        store_name=name,
+                        rate_value=rate_value,
+                        rate_type=rate_type,
+                        rate_display=rate_display,
+                        is_up_to=is_up_to,
+                        source_url=source_url,
+                    )
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Error parsing card {card.get('header', '?')}: {e}"
+                )
+
         return rates
 
 
