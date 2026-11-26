@@ -87,9 +87,14 @@ class AeroplanScraper(BaseScraper):
                             (el) => el.getAttribute('aria-label')?.startsWith('Earn ')
                         );
 
+                        // linkEl.textContent is the plain store name ("Kate Spade").
+                        // Its aria-label is a promo sentence that changes with whatever
+                        // bonus campaign is running ("Earn 10 points per dollar on Kate
+                        // Spade") — using it as the name created a new phantom retailer
+                        // every time the promo wording changed.
                         const name = (
-                            linkEl.getAttribute('aria-label') ||
                             linkEl.textContent ||
+                            linkEl.getAttribute('aria-label') ||
                             ''
                         ).trim();
                         const href = linkEl.getAttribute('href');
