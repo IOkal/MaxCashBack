@@ -137,7 +137,14 @@ LEFT JOIN LATERAL (
              retailer_aliases.id DESC
     LIMIT 1
 ) ra ON true
-WHERE cr.is_current = true;
+WHERE cr.is_current = true
+  -- A row can be marked is_current=true forever if its retailer drops out of
+  -- a source's catalog (delisted, source scraper broken, login-gated, etc.) —
+  -- upserts only touch retailers seen in the latest scrape, they never expire
+  -- ones that stop showing up. Since every scraper does a full-catalog pass
+  -- twice daily, a genuinely still-offered rate is always refreshed well
+  -- within 3 days; anything older than that is stale data masquerading as current.
+  AND cr.last_seen_at > NOW() - INTERVAL '3 days';
 
 CREATE OR REPLACE VIEW historical_rates AS
 SELECT
