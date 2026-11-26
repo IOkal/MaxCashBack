@@ -14,7 +14,7 @@ Users search for a retailer (e.g. "Amazon") and see a comparison table of cashba
 4. **TopCashback Canada** — Cash back (percentage or fixed amount). ~220 stores in the Canada category. Traditional HTML, paginated category pages.
 
 5. **Swagbucks** — Cash back (percentage). ~20 stores anonymously (see Scraping Notes — the site's 2026-06 redesign login-gates the full ~1,500-store directory). Client-side JSON API fetched via Playwright.
-6. **Air Miles Shops** — Points per dollar (Air Miles, ~10.5¢ each). JS-rendered React app at airmilesshops.ca.
+6. **Air Miles Shops** — Points per dollar (now BMO Blue Rewards points, ~0.67¢ each post-2026-06 rebrand — see Scraping Notes). JS-rendered React app at airmilesshops.ca.
 
 Future additions: credit card shopping portals (RBC, TD, etc.)
 
@@ -140,7 +140,19 @@ Four main tables:
 - JS-rendered React app (styled-components) — requires Playwright
 - Store directory shows grid of merchant logos linking to store detail pages
 - Rates in "miles per dollar" format (e.g., "1 Mile per $20 spent")
-- Air Miles Cash redemption: 95 miles = $10 → ~10.5¢ per mile
+- AIR MILES was rebranded to BMO "Blue Rewards" (~2026-06-02); existing miles
+  converted to Blue Points at par, but the cash redemption rate dropped from
+  95 miles = $10 (10.5¢/point) to roughly 1,500 points = $10 (~0.67¢/point).
+  BMO hasn't published an official per-point rate — 0.67¢ is a convergent
+  estimate from third-party points-valuation sites (Prince of Travel,
+  Milesopedia, The Point Calculator, Frugal Flyer), not an official figure.
+  `points_value_cents` updated to 0.67 accordingly (2026-11-26).
+- The shop directory itself is mid-migration: both the legacy
+  airmilesshops.ca and the new earnmore.bluerewards.ca domain redirect
+  through the same oauth.airmiles.ca login wall when hit directly, though
+  the production scraper (via GitHub Actions) was still getting data from
+  airmilesshops.ca without hitting that wall as of 2026-11-26. Watch for
+  this breaking outright — it may require scraping behind a login.
 
 ## Legacy Code
 
