@@ -83,8 +83,13 @@ class AeroplanScraper(BaseScraper):
                         const linkEl = row.querySelector('a[href^="/en-CA/affiliate-details/"]');
                         if (!linkEl) return;
 
-                        const rateEl = Array.from(row.querySelectorAll('[aria-label]')).find(
-                            (el) => el.getAttribute('aria-label')?.startsWith('Earn ')
+                        // The rate is its own leaf element ("Earn 2 pts/$"). Match on
+                        // visible text, not aria-label: the store link also carries an
+                        // "Earn N points per dollar on X" aria-label, and matching that
+                        // grabbed the link and parsed its text (the store name) as 0.
+                        const rateEl = Array.from(row.querySelectorAll('div, span')).find(
+                            (el) => el.children.length === 0 &&
+                                /^Earn\\b.*\\bpts?\\s*\\/\\s*\\$/i.test(el.textContent.trim())
                         );
 
                         // linkEl.textContent is the plain store name ("Kate Spade").
@@ -100,7 +105,7 @@ class AeroplanScraper(BaseScraper):
                         const href = linkEl.getAttribute('href');
                         const rateText = (
                             rateEl?.textContent ||
-                            rateEl?.getAttribute('aria-label') ||
+                            (linkEl.getAttribute('aria-label') || '').replace(/ on .*$/, '') ||
                             ''
                         ).trim();
 

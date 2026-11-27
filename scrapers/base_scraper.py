@@ -47,6 +47,16 @@ class BaseScraper(abc.ABC):
                 "so the workflow step fails and the failure alert fires"
             )
 
+        # A selector that latches onto the wrong element parses every rate as
+        # 0 rather than finding nothing — Aeroplan did this silently for ~2
+        # months (Oct–Nov 2026). Real sources only have a handful of 0% stores.
+        zero_count = sum(1 for r in rates if not r.rate_value)
+        if zero_count > len(rates) / 2:
+            raise RuntimeError(
+                f"{self.SOURCE_NAME}: {zero_count}/{len(rates)} rates parsed as 0 — "
+                "the rate selector is probably broken; refusing to save"
+            )
+
         from db import get_connection, get_source_id, find_or_create_retailer, upsert_cashback_rate
 
         with get_connection() as conn:
