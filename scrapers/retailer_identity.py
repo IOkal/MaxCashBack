@@ -41,6 +41,12 @@ RAW_GLOBAL_CANONICAL_NAME_OVERRIDES: Dict[str, str] = {
     "Chatters Hair Salon": "Chatters Hair",
     "Dell Refurbished Computers": "Dell Refurbished",
     "Canadian Down & Feather Company": "Canadian Down and Feather",
+    # A source used a literal backtick in place of an apostrophe; it survives
+    # normalize_match_key's apostrophe handling as a distinct word boundary,
+    # so plain normalization alone doesn't unify these with the correctly
+    # punctuated name.
+    "Lands` End": "Land's End",
+    "Chefs Plate": "Chef's Plate",
 }
 
 # Overrides that are genuinely specific to how one source formats its names

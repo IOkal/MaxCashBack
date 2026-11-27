@@ -42,6 +42,10 @@ END;
 $$;
 
 -- View for popularity-sorted retailers (used by getFeaturedRetailers)
+-- Only retailers with at least one live current_rates row are eligible —
+-- a store can be "popular" from past visits while every rate it ever had
+-- has since expired (source delisted it, or the source itself broke), and
+-- surfacing it anyway sends visitors to a page with nothing to show.
 CREATE OR REPLACE VIEW popular_retailers AS
 SELECT
     r.id,
@@ -51,6 +55,9 @@ SELECT
     COALESCE(sv.visit_count, 0) AS visit_count
 FROM retailers r
 LEFT JOIN store_visits sv ON sv.retailer_id = r.id
+WHERE EXISTS (
+    SELECT 1 FROM current_rates cur WHERE cur.retailer_id = r.id
+)
 ORDER BY COALESCE(sv.visit_count, 0) DESC, r.name ASC;
 
 GRANT SELECT ON popular_retailers TO anon, authenticated;
